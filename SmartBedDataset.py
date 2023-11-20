@@ -71,6 +71,11 @@ class SmartBedDataset(Dataset):
     def __getitem__(self, idx):
         return self.all_inputs[idx], self.all_targets[idx]
 
+    def denormalize(self, np_array):
+        denormalized_data = np_array * (self.target_max - self.target_min) + self.target_min
+
+        return denormalized_data
+
 
 class ValiDataset(SmartBedDataset):
     def __init__(self, dataset):
