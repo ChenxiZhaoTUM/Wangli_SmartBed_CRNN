@@ -1,12 +1,8 @@
 import os
 import re
 from datetime import datetime
-import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.animation as animation
 import torch
-from torch.utils.data import Dataset
-import unittest
 
 
 ##### average values by second #####
