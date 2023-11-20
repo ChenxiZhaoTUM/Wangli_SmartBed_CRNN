@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import torch.optim as optim
-from model_CRNN import CRNN
+from model_UNet3D import UNet3D
 from SmartBedDataset import SmartBedDataset, ValiDataset
 import utils
 
@@ -31,7 +31,7 @@ saveL1 = True
 # add Dropout2d layer?
 dropout = 0
 
-prefix = "CRNN_01_"
+prefix = "UNet3D_01_"
 if len(sys.argv) > 1:
     prefix = sys.argv[1]
     print("Output prefix: {}".format(prefix))
@@ -59,11 +59,11 @@ print()
 
 ##### setup training #####
 epochs = iterations
-netG = CRNN(channelExponent=expo, dropout=dropout)
+netG = UNet3D(channelExponent=expo, dropout=dropout)
 print(netG)  # print full net
 model_parameters = filter(lambda p: p.requires_grad, netG.parameters())
 params = sum([np.prod(p.size()) for p in model_parameters])
-print("Initialized CRNN with {} trainable params ".format(params))
+print("Initialized UNet3D with {} trainable params ".format(params))
 print()
 
 if len(doLoad) > 0:
@@ -118,8 +118,8 @@ for epoch in range(epochs):
 
         if lossL1viz < 0.01:
             for j in range(batch_size):
-                utils.makeDirs(["TRAIN_CRNN_0.01"])
-                utils.imageOut("TRAIN_CRNN_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                utils.makeDirs(["TRAIN_UNet3D_0.01"])
+                utils.imageOut("TRAIN_UNet3D_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
                                targets_denormalized[j], outputs_denormalized[j])
 
         if lossL1viz < 0.01:
@@ -144,8 +144,8 @@ for epoch in range(epochs):
 
             if lossL1viz < 0.01:
                 for j in range(batch_size):
-                    utils.makeDirs(["VALIDATION_CRNN_0.01"])
-                    utils.imageOut("VALIDATION_CRNN_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                    utils.makeDirs(["VALIDATION_UNet3D_0.01"])
+                    utils.imageOut("VALIDATION_UNet3D_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
     L1_accum /= len(trainLoader)

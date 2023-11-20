@@ -88,8 +88,8 @@ for epoch in range(epochs):
 
         # test code
         # print(i)
-        # print(inputs_cpu.size())  # torch.Size([50, 10, 12, 32, 64])
-        # print(targets_cpu.size())  # torch.Size([50, 1, 32, 64])
+        print(inputs_cpu.size())  # torch.Size([50, 10, 12, 32, 64])
+        print(targets_cpu.size())  # torch.Size([50, 1, 32, 64])
 
         # compute LR decay
         if decayLr:
