@@ -331,31 +331,41 @@ def save_inputs_and_targets(isTest=False, time_step=10):
         input_groups_in_single_file, target_groups_in_single_file = \
             extract_data(common_data_in_single_file, time_step)
 
-        # Define the condition for splitting
-        condition = torch.arange(input_groups_in_single_file.size(0)) % 5 == 0
-
-        # Use boolean indexing to separate validation and input groups
-        validation_groups = input_groups_in_single_file[condition]
-        input_groups = input_groups_in_single_file[~condition]
-
-        print(input_groups.shape)  # test code
-        print(validation_groups.shape)  # test code
-
-        # create a directory for each file if it doesn't exist
         if isTest:
             saveDir = "./dataset/saved_tensor_for_test/"
+            os.makedirs(saveDir, exist_ok=True)
+            test_inputs_save_path = os.path.join(saveDir, f"train_inputs_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
+            test_targets_save_path = os.path.join(saveDir, f"train_targets_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
+            torch.save(input_groups_in_single_file, test_inputs_save_path)
+            torch.save(target_groups_in_single_file, test_targets_save_path)
+
         else:
+            # Define the condition for splitting
+            condition = torch.arange(input_groups_in_single_file.size(0)) % 5 == 0
+
+            # Use boolean indexing to separate validation and input groups
+            vali_input_groups = input_groups_in_single_file[condition]
+            vali_target_groups = target_groups_in_single_file[condition]
+            train_input_groups = input_groups_in_single_file[~condition]
+            train_target_groups = target_groups_in_single_file[~condition]
+
+            print(train_input_groups.shape)  # test code
+            print(vali_input_groups.shape)  # test code
+
+            # create a directory for each file if it doesn't exist
             saveDir = "./dataset/saved_tensor_for_train/"
-        os.makedirs(saveDir, exist_ok=True)
+            os.makedirs(saveDir, exist_ok=True)
 
-        # Save inputs and targets separately
-        inputs_save_path = os.path.join(saveDir, f"inputs_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
-        valis_save_path = os.path.join(saveDir, f"validations_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
-        targets_save_path = os.path.join(saveDir, f"targets_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
+            # Save inputs and targets separately
+            train_inputs_save_path = os.path.join(saveDir, f"train_inputs_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
+            train_targets_save_path = os.path.join(saveDir, f"train_targets_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
+            vali_inputs_save_path = os.path.join(saveDir, f"vali_inputs_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
+            vali_targets_save_path = os.path.join(saveDir, f"vali_targets_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
 
-        torch.save(input_groups, inputs_save_path)
-        torch.save(validation_groups, valis_save_path)
-        torch.save(target_groups_in_single_file, targets_save_path)
+            torch.save(train_input_groups, train_inputs_save_path)
+            torch.save(train_target_groups, train_targets_save_path)
+            torch.save(vali_input_groups, vali_inputs_save_path)
+            torch.save(vali_target_groups, vali_targets_save_path)
 
 
 if __name__ == '__main__':
