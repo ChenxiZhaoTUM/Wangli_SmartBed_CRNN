@@ -64,6 +64,7 @@ class SmartBedDataset(Dataset):
         # print(self.all_inputs.shape)  # torch.Size([4063, 10, 12, 32, 64])
 
         self.totalLength = self.all_inputs.shape[0]
+        print(f"Number of data loaded: {self.totalLength}")
 
     def __len__(self):
         return self.totalLength
@@ -72,7 +73,9 @@ class SmartBedDataset(Dataset):
         return self.all_inputs[idx], self.all_targets[idx]
 
     def denormalize(self, np_array):
-        denormalized_data = np_array * (self.target_max - self.target_min) + self.target_min
+        target_max = 60
+        target_min = 0
+        denormalized_data = np_array * (target_max - target_min) + target_min
 
         return denormalized_data
 
@@ -82,6 +85,7 @@ class ValiDataset(SmartBedDataset):
         self.all_inputs = dataset.all_vali_inputs
         self.all_targets = dataset.all_vali_targets
         self.totalLength = self.all_inputs.shape[0]
+        print(f"Number of data loaded: {self.totalLength}")
 
     def __len__(self):
         return self.totalLength
@@ -110,4 +114,3 @@ if __name__ == '__main__':
     # Verify if the printed length matches the expected total length
     if vali_dataset_length == vali_data_set.totalLength:
         print("Length check passed!")
-
