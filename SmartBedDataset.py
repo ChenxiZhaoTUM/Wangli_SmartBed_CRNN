@@ -5,7 +5,7 @@ import unittest
 import os
 
 
-def DataLoader(data, isTest=False):
+def TensorLoader(data, isTest=False):
     if isTest:
         folder_path = data.dataDirTest
         files = [file for file in os.listdir(folder_path) if "test_inputs" in file]
@@ -60,7 +60,7 @@ class SmartBedDataset(Dataset):
         self.dataDir = dataDir
         self.dataDirTest = dataDirTest  # only for mode==self.TEST
 
-        DataLoader(self, isTest=(mode == self.TEST))
+        TensorLoader(self, isTest=(mode == self.TEST))
         # print(self.all_inputs.shape)  # torch.Size([4063, 10, 12, 32, 64])
 
         self.totalLength = self.all_inputs.shape[0]
