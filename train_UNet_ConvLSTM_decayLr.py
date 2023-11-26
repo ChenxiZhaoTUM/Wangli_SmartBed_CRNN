@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import torch.optim as optim
+from torch.optim.lr_scheduler import StepLR
 from model_UNet_ConvLSTM import UNet_ConvLSTM
 from SmartBedDataset_ReadOriginalTensor import SmartBedDataset_Base, SmartBedDataset_Train
 import utils
@@ -76,6 +77,7 @@ netG.to(device)
 
 criterionMSELoss = nn.MSELoss()
 optimizer = optim.Adam(netG.parameters(), lr=lrG, weight_decay=0.0)
+scheduler = StepLR(optimizer, step_size=decayLr, gamma=0.1)
 
 ##### training begins #####
 for epoch in range(epochs):
@@ -93,13 +95,6 @@ for epoch in range(epochs):
         # print(inputs_cpu.size())  # torch.Size([50, 10, 12, 32, 64])
         # print(targets_cpu.size())  # torch.Size([50, 1, 32, 64])
 
-        # compute LR decay
-        if decayLr:
-            currLr = utils.computeLR(epoch, epochs, lrG * 0.1, lrG)
-            if currLr < lrG:
-                for g in optimizer.param_groups:
-                    g['lr'] = currLr
-
         gen_out = netG(inputs)
         gen_out_cpu = gen_out.data.cpu().numpy()
 
@@ -110,6 +105,10 @@ for epoch in range(epochs):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        # LR decay
+        if decayLr:
+            scheduler.step()
 
         MSELossViz = loss.item()
         MSELoss_accum += MSELossViz

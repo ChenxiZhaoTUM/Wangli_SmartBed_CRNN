@@ -4,12 +4,13 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import torch.optim as optim
-from model_UNet_ConvLSTM import UNet_ConvLSTM
+from torch.optim.lr_scheduler import StepLR
+from model_CRNN import CRNN
 from SmartBedDataset_ReadOriginalTensor import SmartBedDataset_Base, SmartBedDataset_Train
 import utils
 
-use_cuda = torch.cuda.is_available()  # check if GPU exists
-device = torch.device("cuda" if use_cuda else "cpu")  # use CPU or GPU
+use_cuda = torch.cuda.is_available()                   # check if GPU exists
+device = torch.device("cuda" if use_cuda else "cpu")   # use CPU or GPU
 
 ##### basic settings #####
 # number of training iterations
@@ -31,7 +32,7 @@ saveMSELoss = True
 # add Dropout2d layer?
 dropout = 0
 
-prefix = "UNet_ConvLSTM_01_"
+prefix = "CRNN_01_"
 if len(sys.argv) > 1:
     prefix = sys.argv[1]
     print("Output prefix: {}".format(prefix))
@@ -61,11 +62,11 @@ print()
 
 ##### setup training #####
 epochs = iterations
-netG = UNet_ConvLSTM(channelExponent=expo, dropout=dropout)
+netG = CRNN(channelExponent=expo, dropout=dropout)
 print(netG)  # print full net
 model_parameters = filter(lambda p: p.requires_grad, netG.parameters())
 params = sum([np.prod(p.size()) for p in model_parameters])
-print("Initialized UNet_ConvLSTM with {} trainable params ".format(params))
+print("Initialized CRNN with {} trainable params ".format(params))
 print()
 
 if len(doLoad) > 0:
@@ -76,6 +77,7 @@ netG.to(device)
 
 criterionMSELoss = nn.MSELoss()
 optimizer = optim.Adam(netG.parameters(), lr=lrG, weight_decay=0.0)
+scheduler = StepLR(optimizer, step_size=decayLr, gamma=0.1)
 
 ##### training begins #####
 for epoch in range(epochs):
@@ -93,13 +95,6 @@ for epoch in range(epochs):
         # print(inputs_cpu.size())  # torch.Size([50, 10, 12, 32, 64])
         # print(targets_cpu.size())  # torch.Size([50, 1, 32, 64])
 
-        # compute LR decay
-        if decayLr:
-            currLr = utils.computeLR(epoch, epochs, lrG * 0.1, lrG)
-            if currLr < lrG:
-                for g in optimizer.param_groups:
-                    g['lr'] = currLr
-
         gen_out = netG(inputs)
         gen_out_cpu = gen_out.data.cpu().numpy()
 
@@ -110,6 +105,10 @@ for epoch in range(epochs):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        # LR decay
+        if decayLr:
+            scheduler.step()
 
         MSELossViz = loss.item()
         MSELoss_accum += MSELossViz
@@ -124,8 +123,8 @@ for epoch in range(epochs):
         random_indices = random.sample(range(len(trainLoader)), 20)
         if epoch % 500 == 0 and i in random_indices:
             for j in range(batch_size):
-                utils.makeDirs(["TRAIN_UNet_ConvLSTM"])
-                utils.imageOut("TRAIN_UNet_ConvLSTM/epoch{}_{}_{}".format(epoch, i, j), inputs_cpu[j],
+                utils.makeDirs(["TRAIN_CRNN"])
+                utils.imageOut("TRAIN_CRNN/epoch{}_{}_{}".format(epoch, i, j), inputs_cpu[j],
                                targets_denormalized[j], outputs_denormalized[j])
 
             torch.save(netG.state_dict(), prefix + "model")
@@ -154,8 +153,8 @@ for epoch in range(epochs):
             random_indices = random.sample(range(len(valiLoader)), 20)
             if epoch % 500 == 0 and i in random_indices:
                 for j in range(batch_size):
-                    utils.makeDirs(["VALIDATION_UNet_ConvLSTM"])
-                    utils.imageOut("VALIDATION_UNet_ConvLSTM/epoch{}_{}_{}".format(epoch, i, j), inputs_cpu[j],
+                    utils.makeDirs(["VALIDATION_CRNN"])
+                    utils.imageOut("VALIDATION_CRNN/epoch{}_{}_{}".format(epoch, i, j), inputs_cpu[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
     MSELoss_accum /= len(trainLoader)
