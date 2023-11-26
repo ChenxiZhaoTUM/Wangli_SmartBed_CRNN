@@ -121,13 +121,12 @@ for epoch in range(epochs):
         targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
         outputs_denormalized = raw_dataset.denormalize(gen_out_cpu)
 
-        if MSELossViz < 0.01:
+        if epoch % 1000 == 0:
             for j in range(batch_size):
-                utils.makeDirs(["TRAIN_UNet3D_0.01"])
-                utils.imageOut("TRAIN_UNet3D_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                utils.makeDirs(["TRAIN_UNet3D"])
+                utils.imageOut("TRAIN_UNet3D/epoch{}_{}_{}".format(epoch, i, j), inputs_cpu[j],
                                targets_denormalized[j], outputs_denormalized[j])
 
-        if MSELossViz < 0.01:
             torch.save(netG.state_dict(), prefix + "model")
 
     # VALIDATION
@@ -151,10 +150,10 @@ for epoch in range(epochs):
             targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
             outputs_denormalized = raw_dataset.denormalize(outputs_cpu)
 
-            if MSELossViz < 0.01:
+            if epoch % 1000 == 0:
                 for j in range(batch_size):
-                    utils.makeDirs(["VALIDATION_UNet3D_0.01"])
-                    utils.imageOut("VALIDATION_UNet3D_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                    utils.makeDirs(["VALIDATION_UNet3D"])
+                    utils.imageOut("VALIDATION_UNet3D/epoch{}_{}_{}".format(epoch, i, j), inputs_cpu[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
     MSELoss_accum /= len(trainLoader)
