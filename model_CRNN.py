@@ -64,7 +64,8 @@ class CRNN(nn.Module):
         self.CNN_embed_dim = channels * 8
         self.RNN_layers = RNN_layers
         self.RNN_output_size = channels * 8
-        self.rnn = nn.RNN(self.CNN_embed_dim, self.RNN_output_size, self.RNN_layers, batch_first=True)
+        # self.rnn = nn.RNN(self.CNN_embed_dim, self.RNN_output_size, self.RNN_layers, batch_first=True)
+        self.lstm = nn.LSTM(self.CNN_embed_dim, self.RNN_output_size, self.RNN_layers, batch_first=True)
 
         ##### U-Net Decoder #####
         self.dlayer5 = blockUNet(channels * 8, channels * 4, 'dlayer5', transposed=True, bn=True, relu=True,
@@ -96,8 +97,12 @@ class CRNN(nn.Module):
 
         cnn_embed_seq = torch.stack(cnn_embed_seq, dim=0).transpose_(0, 1)  # torch.Size([20, 10, 64, 1, 1])
         cnn_embed_seq = cnn_embed_seq.view(x_3d.size(0), x_3d.size(1), -1)
-        rnn_output, _ = self.rnn(cnn_embed_seq)
-        last_output = rnn_output[:, -1, :]  # torch.Size([20, 64])
+        # RNN
+        # rnn_output, _ = self.rnn(cnn_embed_seq)
+        # last_output = rnn_output[:, -1, :].clone()  # torch.Size([20, 64])
+        # LSTM
+        lstm_output, _ = self.lstm(cnn_embed_seq)
+        last_output = lstm_output[:, -1, :].clone()  # torch.Size([20, 64])
 
         last_output_expand = last_output.unsqueeze(-1).unsqueeze(-1)  # torch.Size([20, 64, 1, 1])
 
