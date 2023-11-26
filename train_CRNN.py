@@ -121,7 +121,7 @@ for epoch in range(epochs):
         targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
         outputs_denormalized = raw_dataset.denormalize(gen_out_cpu)
 
-        if epoch % 1000 == 0:
+        if epoch % 500 == 0:
             for j in range(batch_size):
                 utils.makeDirs(["TRAIN_CRNN"])
                 utils.imageOut("TRAIN_CRNN/epoch{}_{}_{}".format(epoch, i, j), inputs_cpu[j],
@@ -150,7 +150,7 @@ for epoch in range(epochs):
             targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
             outputs_denormalized = raw_dataset.denormalize(outputs_cpu)
 
-            if epoch % 1000 == 0:
+            if epoch % 500 == 0:
                 for j in range(batch_size):
                     utils.makeDirs(["VALIDATION_CRNN"])
                     utils.imageOut("VALIDATION_CRNN/epoch{}_{}_{}".format(epoch, i, j), inputs_cpu[j],
