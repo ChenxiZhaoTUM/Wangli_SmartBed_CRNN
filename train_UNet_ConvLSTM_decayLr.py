@@ -120,7 +120,7 @@ for epoch in range(epochs):
         targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
         outputs_denormalized = raw_dataset.denormalize(gen_out_cpu)
 
-        random_indices = random.sample(range(len(trainLoader)), 20)
+        random_indices = random.sample(range(len(trainLoader)), 10)
         if epoch % 500 == 0 and i in random_indices:
             for j in range(batch_size):
                 utils.makeDirs(["TRAIN_UNet_ConvLSTM"])
@@ -150,7 +150,7 @@ for epoch in range(epochs):
             targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
             outputs_denormalized = raw_dataset.denormalize(outputs_cpu)
 
-            random_indices = random.sample(range(len(valiLoader)), 20)
+            random_indices = random.sample(range(len(valiLoader)), 10)
             if epoch % 500 == 0 and i in random_indices:
                 for j in range(batch_size):
                     utils.makeDirs(["VALIDATION_UNet_ConvLSTM"])
