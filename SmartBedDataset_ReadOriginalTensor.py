@@ -72,7 +72,7 @@ class SmartBedDataset_Base(Dataset):
         return denormalized_data
 
 
-class SmartBedDataset_Train:
+class SmartBedDataset_Train(SmartBedDataset_Base):
     # for divide train data into train and validation (70% data in one file for train)
     def __init__(self, ori_dataset, model):
         self.data_set = ori_dataset

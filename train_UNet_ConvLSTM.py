@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from model_UNet_ConvLSTM import UNet_ConvLSTM
-from SmartBedDataset_ReadTensorSlice import SmartBedDataset, ValiDataset
+from SmartBedDataset_ReadOriginalTensor import SmartBedDataset_Base, SmartBedDataset_Train
 import utils
 
 use_cuda = torch.cuda.is_available()                   # check if GPU exists
@@ -49,11 +49,13 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 ##### create pytorch data object with dataset #####
-data = SmartBedDataset()
-trainLoader = DataLoader(data, batch_size=batch_size, shuffle=True, drop_last=True)
+raw_dataset = SmartBedDataset_Base(time_step=time_step)
+train_dataset = SmartBedDataset_Train(raw_dataset, model="train")
+trainLoader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 print("Training batches: {}".format(len(trainLoader)))
-dataValidation = ValiDataset(data)
-valiLoader = DataLoader(dataValidation, batch_size=batch_size, shuffle=False, drop_last=True)
+
+vali_dataset = SmartBedDataset_Train(raw_dataset, model="validation")
+valiLoader = DataLoader(vali_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 print("Validation batches: {}".format(len(valiLoader)))
 print()
 
@@ -113,8 +115,8 @@ for epoch in range(epochs):
             logline = "Epoch: {}, batch-idx: {}, L1: {}\n".format(epoch, i, lossL1viz)
             print(logline)
 
-        targets_denormalized = data.denormalize(targets_cpu.cpu().numpy())
-        outputs_denormalized = data.denormalize(gen_out_cpu)
+        targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
+        outputs_denormalized = raw_dataset.denormalize(gen_out_cpu)
 
         if lossL1viz < 0.01:
             for j in range(batch_size):
@@ -139,8 +141,8 @@ for epoch in range(epochs):
             lossL1 = criterionL1(outputs, targets)
             L1val_accum += lossL1.item()
 
-            targets_denormalized = data.denormalize(targets_cpu.cpu().numpy())
-            outputs_denormalized = data.denormalize(outputs_cpu)
+            targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
+            outputs_denormalized = raw_dataset.denormalize(outputs_cpu)
 
             if lossL1viz < 0.01:
                 for j in range(batch_size):
