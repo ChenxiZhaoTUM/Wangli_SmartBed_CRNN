@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from model_UNet3D import UNet3D
-from SmartBedDataset import SmartBedDataset, ValiDataset
+from SmartBedDataset_ReadTensorSlice import SmartBedDataset, ValiDataset
 import utils
 
 use_cuda = torch.cuda.is_available()                   # check if GPU exists

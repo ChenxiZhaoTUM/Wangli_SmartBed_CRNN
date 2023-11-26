@@ -186,10 +186,10 @@ def change_dimension(input_data, input_sleep_data, target_data):
     new_input_data = torch.zeros(12, 32, 64)
 
     for ch in range(11):
-        new_input_data[ch, :, :] = input_sleep_data[ch]  # input_sleep_data to 11 channels
+        new_input_data[ch, :, :] = torch.tensor(input_sleep_data[ch])  # input_sleep_data to 11 channels
 
     for j in range(16):
-        new_input_data[11, :, j * 4: (j + 1) * 4] = input_data[j]
+        new_input_data[11, :, j * 4: (j + 1) * 4] = torch.tensor(input_data[j])
 
     new_target_data = torch.from_numpy(target_data).unsqueeze(0)
     return new_input_data, new_target_data
