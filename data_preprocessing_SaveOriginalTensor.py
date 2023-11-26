@@ -314,18 +314,15 @@ def save_inputs_and_targets(isTest=False):
         if isTest:
             saveDir = "./dataset/saved_tensor_for_test/"
             os.makedirs(saveDir, exist_ok=True)
-            inputs_save_path = os.path.join(saveDir,
-                                            f"test_inputs_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
-            targets_save_path = os.path.join(saveDir,
-                                             f"test_targets_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
 
         else:
             saveDir = "./dataset/saved_tensor_for_train/"
             os.makedirs(saveDir, exist_ok=True)
-            inputs_save_path = os.path.join(saveDir,
-                                            f"train_inputs_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
-            targets_save_path = os.path.join(saveDir,
-                                             f"train_targets_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
+
+        inputs_save_path = os.path.join(saveDir,
+                                        f"inputs_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
+        targets_save_path = os.path.join(saveDir,
+                                         f"targets_{os.path.splitext(os.path.basename(file_path))[0]}.pth")
 
         torch.save(inputs, inputs_save_path)
         torch.save(targets, targets_save_path)
