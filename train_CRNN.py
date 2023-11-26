@@ -139,7 +139,8 @@ for epoch in range(epochs):
             outputs_cpu = outputs.data.cpu().numpy()
 
             lossL1 = criterionL1(outputs, targets)
-            L1val_accum += lossL1.item()
+            lossL1viz = lossL1.item()
+            L1val_accum += lossL1viz
 
             targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
             outputs_denormalized = raw_dataset.denormalize(outputs_cpu)
