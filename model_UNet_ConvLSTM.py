@@ -109,7 +109,7 @@ class UNet_ConvLSTM(nn.Module):
 
         layer_output, last_states = self.convlstm(unet_embed_seq)
         # layer_output[0]: (batch_size, time_step, output_channels, height, width) of the last layer
-        last_time_of_last_layer_output = layer_output[-1]
+        last_time_of_last_layer_output = layer_output[-1].clone()
         return last_time_of_last_layer_output
 
 
