@@ -36,7 +36,7 @@ class dataset_base():
         print(self.data_length)
         file_idx = 0
         for length in self.length_each_file:
-            if (idx + 1) < length:
+            if (idx + 1) <= length:
                 break
             else:
                 file_idx += 1
@@ -85,5 +85,6 @@ class data_set_run():
 
 
 raw_dataset = dataset_base()
-# print(raw_dataset[11])  # (tensor([[2, 1], [2, 2], [2, 3]]), tensor([2, 3]))
+# print(raw_dataset[11])  # 12th group: (tensor([[2, 1], [2, 2], [2, 3]]), tensor([2, 3]))
+print(raw_dataset[9])  # 10th group: (tensor([[ 1,  9], [ 1, 10], [ 1, 11]]), tensor([ 1, 11]))
 train_dataset = data_set_run(raw_dataset, model="train")
