@@ -27,7 +27,7 @@ expo = 3
 # data set config
 prop = None  # by default, use all from "./dataset/for_train"
 # save txt files with per epoch loss?
-saveL1 = True
+saveMSELoss = True
 # add Dropout2d layer?
 dropout = 0
 
@@ -74,8 +74,8 @@ if len(doLoad) > 0:
     print("Loaded model " + doLoad)
 netG.to(device)
 
-criterionL1 = nn.L1Loss()
-optimizerG = optim.Adam(netG.parameters(), lr=lrG, weight_decay=0.0)
+criterionMSELoss = nn.MSELoss()
+optimizer = optim.Adam(netG.parameters(), lr=lrG, weight_decay=0.0)
 
 ##### training begins #####
 for epoch in range(epochs):
@@ -83,7 +83,7 @@ for epoch in range(epochs):
 
     # TRAIN
     netG.train()
-    L1_accum = 0.0
+    MSELoss_accum = 0.0
     for i, traindata in enumerate(trainLoader, 0):
         inputs_cpu, targets_cpu = traindata
         inputs, targets = inputs_cpu.to(device), targets_cpu.to(device)
@@ -97,39 +97,42 @@ for epoch in range(epochs):
         if decayLr:
             currLr = utils.computeLR(epoch, epochs, lrG * 0.1, lrG)
             if currLr < lrG:
-                for g in optimizerG.param_groups:
+                for g in optimizer.param_groups:
                     g['lr'] = currLr
 
         gen_out = netG(inputs)
         gen_out_cpu = gen_out.data.cpu().numpy()
 
-        lossL1 = criterionL1(gen_out, targets)
-        optimizerG.zero_grad()
-        lossL1.backward()
-        optimizerG.step()
+        gen_out = gen_out.float()
+        targets = targets.float()
 
-        lossL1viz = lossL1.item()
-        L1_accum += lossL1viz
+        loss = criterionMSELoss(gen_out, targets)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        MSELossViz = loss.item()
+        MSELoss_accum += MSELossViz
 
         if i == len(trainLoader) - 1:
-            logline = "Epoch: {}, batch-idx: {}, L1: {}\n".format(epoch, i, lossL1viz)
+            logline = "Epoch: {}, batch-idx: {}, MSELoss: {}\n".format(epoch, i, MSELossViz)
             print(logline)
 
         targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
         outputs_denormalized = raw_dataset.denormalize(gen_out_cpu)
 
-        if lossL1viz < 0.01:
+        if MSELossViz < 0.01:
             for j in range(batch_size):
                 utils.makeDirs(["TRAIN_CRNN_0.01"])
                 utils.imageOut("TRAIN_CRNN_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
                                targets_denormalized[j], outputs_denormalized[j])
 
-        if lossL1viz < 0.01:
+        if MSELossViz < 0.01:
             torch.save(netG.state_dict(), prefix + "model")
 
     # VALIDATION
     netG.eval()
-    L1val_accum = 0.0
+    MSELossVal_accum = 0.0
     with torch.no_grad():
         for i, validata in enumerate(valiLoader, 0):
             inputs_cpu, targets_cpu = validata
@@ -138,24 +141,27 @@ for epoch in range(epochs):
             outputs = netG(inputs)
             outputs_cpu = outputs.data.cpu().numpy()
 
-            lossL1 = criterionL1(outputs, targets)
-            lossL1viz = lossL1.item()
-            L1val_accum += lossL1viz
+            outputs = outputs.float()
+            targets = targets.float()
+
+            loss = criterionMSELoss(outputs, targets)
+            MSELossViz = loss.item()
+            MSELossVal_accum += MSELossViz
 
             targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
             outputs_denormalized = raw_dataset.denormalize(outputs_cpu)
 
-            if lossL1viz < 0.01:
+            if MSELossViz < 0.01:
                 for j in range(batch_size):
                     utils.makeDirs(["VALIDATION_CRNN_0.01"])
                     utils.imageOut("VALIDATION_CRNN_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
-    L1_accum /= len(trainLoader)
-    L1val_accum /= len(valiLoader)
-    if saveL1:
+    MSELoss_accum /= len(trainLoader)
+    MSELossVal_accum /= len(valiLoader)
+    if saveMSELoss:
         if epoch == 0:
-            utils.resetLog(prefix + "L1.txt")
-            utils.resetLog(prefix + "L1val.txt")
-        utils.log(prefix + "L1.txt", "{} ".format(L1_accum), False)
-        utils.log(prefix + "L1val.txt", "{} ".format(L1val_accum), False)
+            utils.resetLog(prefix + "MSELoss.txt")
+            utils.resetLog(prefix + "MSELossVal.txt")
+        utils.log(prefix + "MSELoss.txt", "{} ".format(MSELoss_accum), False)
+        utils.log(prefix + "MSELossVal.txt", "{} ".format(MSELossVal_accum), False)
