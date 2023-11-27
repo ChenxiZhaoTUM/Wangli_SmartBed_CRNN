@@ -36,8 +36,6 @@ if len(sys.argv) > 1:
     prefix = sys.argv[1]
     print("Output prefix: {}".format(prefix))
 
-doLoad = ""  # optional, path to pre-trained model
-
 print("LR: {}".format(lrG))
 print("LR decay: {}".format(decayLr))
 print("Iterations: {}".format(iterations))
@@ -68,6 +66,7 @@ params = sum([np.prod(p.size()) for p in model_parameters])
 print("Initialized CRNN with {} trainable params ".format(params))
 print()
 
+doLoad = ""  # optional, path to pre-trained model
 if len(doLoad) > 0:
     # netG.load_state_dict(torch.load(doLoad))
     netG.load_state_dict(torch.load(doLoad, map_location=torch.device('cpu')))
