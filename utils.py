@@ -30,6 +30,8 @@ def imageOut(filename, _input, _target, _output, max_val=40, min_val=0):
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
 
     last_channel = _input[-1, -1, :, :]
+    last_channel = np.delete(last_channel, [4 * i + 3 for i in range(16)], axis=1)
+    last_channel = np.concatenate((last_channel, np.zeros((32, 16))), axis=1)
     last_channel_image = np.reshape(last_channel, (32, 64))
     ax1.set_aspect('equal', 'box')
     im1 = ax1.imshow(last_channel_image, cmap='jet', vmin=0, vmax=0.6)
