@@ -1,6 +1,7 @@
 import os
 from tkinter import Tk, Label, PhotoImage
 from PIL import Image, ImageTk
+from matplotlib import pyplot as plt
 
 
 class ImageDisplay:
@@ -38,6 +39,53 @@ class ImageDisplay:
         self.root.after(500, self.next_image_auto)
 
 
+def LossDisplay(train_file_path, vali_file_path, filter_threshold=None):
+    with open(train_file_path, 'r') as file:
+        train_loss = [float(line.strip()) for line in file.readlines()]
+
+    with open(vali_file_path, 'r') as file:
+        vali_loss = [float(line.strip()) for line in file.readlines()]
+
+    iteration_numbers_train = list(range(len(train_loss)))
+    iteration_numbers_vali = list(range(len(vali_loss)))
+
+    if filter_threshold is not None:
+        filtered_data_train = [(iteration, loss) for iteration, loss in zip(iteration_numbers_train, train_loss) if
+                               loss <= filter_threshold]
+        iteration_numbers_train, train_loss = zip(*filtered_data_train)
+
+        filtered_data_vali = [(iteration, loss) for iteration, loss in zip(iteration_numbers_vali, vali_loss) if
+                              loss <= filter_threshold]
+        iteration_numbers_vali, vali_loss = zip(*filtered_data_vali)
+
+    plt.figure(figsize=(14, 12))
+
+    plt.subplot(2, 1, 1)
+    plt.plot(iteration_numbers_train, train_loss, label='Train Loss')
+    plt.xlabel('iteration')
+    plt.ylabel('loss')
+    plt.title('loss of train')
+    plt.grid(True)
+    plt.legend()
+    plt.xlim(0, len(iteration_numbers_train))
+    plt.ylim(min(train_loss), max(train_loss))
+
+    plt.subplot(2, 1, 2)
+    plt.plot(iteration_numbers_vali, vali_loss, color='orange', label='Validation Loss')
+    plt.xlabel('iteration')
+    plt.ylabel('loss')
+    plt.title('loss of validation')
+    plt.grid(True)
+    plt.legend()
+    plt.xlim(0, len(iteration_numbers_vali))
+    plt.ylim(min(vali_loss), max(vali_loss))
+
+    plt.tight_layout()
+    plt.show()
+
+
 if __name__ == "__main__":
-    folder_path = "./TEST_UNet3D_02"
-    ImageDisplay(folder_path)
+    # folder_path = "./TEST_UNet3D_02"
+    # ImageDisplay(folder_path)
+
+    LossDisplay("./UNet3D_03_MSELoss.txt", "./UNet3D_03_MSELossVal.txt", filter_threshold=0.005)
