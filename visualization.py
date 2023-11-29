@@ -1,3 +1,4 @@
+import math
 import os
 from tkinter import Tk, Label, PhotoImage
 from PIL import Image, ImageTk
@@ -84,8 +85,42 @@ def LossDisplay(train_file_path, vali_file_path, filter_threshold=None):
     plt.show()
 
 
+def computeLR(i, epochs, minLR, maxLR):
+    if i < epochs * 0.5:
+        return maxLR
+    e = (i / float(epochs) - 0.5) * 2.
+    # rescale second half to min/max range
+    fmin = 0.
+    fmax = 6.
+    e = fmin + e * (fmax - fmin)
+    f = math.pow(0.5, e)
+    return minLR + (maxLR - minLR) * f
+
+
+def train(epochs, minLR, maxLR):
+    learning_rates = []
+    for i in range(epochs):
+        lr = computeLR(i, epochs, minLR, maxLR)
+        learning_rates.append(lr)
+    return learning_rates
+
+
+def plot_lr(epoch_lr):
+    plt.plot(range(1, len(epoch_lr) + 1), epoch_lr)
+    plt.xlabel('Epoch')
+    plt.ylabel('Learning Rate')
+    plt.title('Epoch vs Learning Rate')
+    plt.grid(True)
+    plt.show()
+
+
 if __name__ == "__main__":
     # folder_path = "./TEST_UNet3D_02"
     # ImageDisplay(folder_path)
 
-    LossDisplay("./UNet3D_03_MSELoss.txt", "./UNet3D_03_MSELossVal.txt", filter_threshold=0.005)
+    # LossDisplay("./UNet3D_03_MSELoss.txt", "./UNet3D_03_MSELossVal.txt", filter_threshold=0.005)
+
+    lrG = 0.0006
+    epochs = 1000000
+    learning_rates = train(epochs, lrG * 0.1, lrG)
+    plot_lr(learning_rates)

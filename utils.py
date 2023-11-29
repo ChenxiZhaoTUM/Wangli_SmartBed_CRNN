@@ -1,7 +1,5 @@
-import math, re, os
+import math, os
 import numpy as np
-from PIL import Image
-from matplotlib import cm
 import matplotlib.pyplot as plt
 
 
