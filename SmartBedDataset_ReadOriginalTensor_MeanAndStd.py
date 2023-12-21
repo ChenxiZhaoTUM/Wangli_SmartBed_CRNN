@@ -61,6 +61,7 @@ class SmartBedDataset_Base(Dataset):
 
         normalized_target = (data_now_target - self.target_mean) / self.target_std
 
+        self.input_std[self.input_std == 0] = 1e-8
         expanded_input_mean = self.input_mean.unsqueeze(1).unsqueeze(2)
         expanded_input_std = self.input_std.unsqueeze(1).unsqueeze(2)
         normalized_input = (data_now_input - expanded_input_mean) / expanded_input_std
@@ -92,7 +93,7 @@ class SmartBedDataset_Base(Dataset):
         return all_inputs, all_targets, target_mean, target_std, input_mean, input_std
 
     def denormalize(self, np_array):
-        denormalized_data = np_array * self.target_std + self.target_mean
+        denormalized_data = np_array * self.target_std.numpy() + self.target_mean.numpy()
         return denormalized_data
 
 
