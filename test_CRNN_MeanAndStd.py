@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from model_CRNN import CRNN
-from SmartBedDataset_ReadOriginalTensor import SmartBedDataset_Base
+from SmartBedDataset_ReadOriginalTensor_MeanAndStd import SmartBedDataset_Base, SmartBedDataset_Test
 import utils
 
 use_cuda = torch.cuda.is_available()  # check if GPU exists
@@ -29,7 +29,15 @@ expo = 4
 dropout = 0
 
 ##### create pytorch data object with dataset #####
-raw_dataset = SmartBedDataset_Base(mode=SmartBedDataset_Base.TEST, time_step=time_step)
+# load mean and std of train_dataset
+input_mean = torch.load('dataset/saved_tensor_for_train/input_mean.pt')
+input_std = torch.load('dataset/saved_tensor_for_train/input_std.pt')
+target_mean = torch.load('dataset/saved_tensor_for_train/target_mean.pt')
+target_std = torch.load('dataset/saved_tensor_for_train/target_std.pt')
+
+raw_dataset = SmartBedDataset_Base(time_step=time_step)
+raw_dataset = SmartBedDataset_Test(raw_dataset, model="test", input_mean=input_mean, input_std=input_std,
+                                   target_mean=target_mean, target_std=target_std)
 testLoader = DataLoader(raw_dataset, batch_size=1, shuffle=False)
 print("Test batches: {}".format(len(testLoader)))
 
