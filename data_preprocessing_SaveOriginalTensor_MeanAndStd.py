@@ -176,10 +176,6 @@ def deal_with_sleep_txt_file(sleep_txt_file_path):
         return time_arr_sleep_txt, value_arr_sleep_txt
 
 
-pressureNormalization = True
-inputNormalization = True
-
-
 # change input_data to [12, 32, 64]
 # change output_data to [1, 32, 64]
 def change_dimension(input_data, input_sleep_data, target_data):
@@ -193,33 +189,6 @@ def change_dimension(input_data, input_sleep_data, target_data):
 
     new_target_data = torch.from_numpy(target_data).unsqueeze(0)
     return new_input_data, new_target_data
-
-
-def loader_normalizer(inputs_pressure_arr, targets_arr):
-    inputs_pressure_arr_norm = []
-    targets_arr_norm = []
-
-    if pressureNormalization:
-        if len(targets_arr) > 0:
-            # target_min = np.amin(targets_arr)
-            # target_max = np.amax(targets_arr)
-            target_min = 0
-            target_max = 60
-
-            for target_value in targets_arr:
-                normalized_target_value = (target_value - target_min) / (target_max - target_min)
-                targets_arr_norm.append(normalized_target_value)
-
-            targets_arr = np.array(targets_arr_norm)
-
-    if inputNormalization:
-        if len(inputs_pressure_arr) > 0:
-            for input_value in inputs_pressure_arr:
-                normalized_input_data = input_value / 4096
-                inputs_pressure_arr_norm.append(normalized_input_data)
-            inputs_pressure_arr = np.array(inputs_pressure_arr_norm)
-
-    return inputs_pressure_arr, targets_arr
 
 
 ##### save common data from file by file #####
@@ -245,7 +214,6 @@ def load_data_from_file(csv_file_path):
     avg_time_arr_txt, avg_value_arr_txt = average_by_sec(time_arr_txt, value_arr_txt)
     avg_time_arr_sleep_txt, avg_value_arr_sleep_txt = average_by_sec(time_arr_sleep_txt, value_arr_sleep_txt)
     avg_time_arr_csv, avg_value_arr_csv = average_by_sec(time_arr_csv, value_arr_csv)
-    # avg_value_arr_txt, avg_value_arr_csv = loader_normalizer(avg_value_arr_txt, avg_value_arr_csv)
 
     avg_value_arr_csv = reshape_output_value(avg_value_arr_csv)
 
