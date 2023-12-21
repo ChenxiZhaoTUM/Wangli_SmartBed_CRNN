@@ -165,7 +165,6 @@ sleep_lines = [
     "[13:37:31.539]AB110000000000002C1400000097093955"
 ]
 
-
 # List to store individual tensors, maintaining a rolling window of ten tensors
 global_tensor_list = []
 i = 0
@@ -197,6 +196,7 @@ def result_of_CRNN(pressure_line, sleep_line):
             # print(f"Combined tensor shape: {combined_tensor.shape}")
 
             output = netG(combined_tensor)
+            output[output < 0] = 0
             # print(f"Output tensor shape: {output.shape}")
             output_denormalize = denormalize(output.detach().numpy())
 
