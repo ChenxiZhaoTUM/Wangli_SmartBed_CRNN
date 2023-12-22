@@ -32,7 +32,7 @@ class SmartBedDataset_Base(Dataset):
             self.all_inputs, self.all_targets, _, _, _, _ = self.TensorLoader()
         else:
             self.all_inputs, self.all_targets, \
-                self.target_mean, self.target_std, self.input_mean, self.input_std = self.TensorLoader()
+                self.input_mean, self.input_std, self.target_mean, self.target_std = self.TensorLoader()
             torch.save(self.input_mean, 'dataset/saved_tensor_for_train/input_mean.pt')
             torch.save(self.input_std, 'dataset/saved_tensor_for_train/input_std.pt')
             torch.save(self.target_mean, 'dataset/saved_tensor_for_train/target_mean.pt')
@@ -59,12 +59,8 @@ class SmartBedDataset_Base(Dataset):
         data_now_target = self.all_targets[file_idx]
         # print(data_now_input[idx: idx + self.length_sque].shape)
 
+        normalized_input = (data_now_input - self.input_mean) / self.input_std
         normalized_target = (data_now_target - self.target_mean) / self.target_std
-
-        self.input_std[self.input_std == 0] = 1e-8
-        expanded_input_mean = self.input_mean.unsqueeze(1).unsqueeze(2)
-        expanded_input_std = self.input_std.unsqueeze(1).unsqueeze(2)
-        normalized_input = (data_now_input - expanded_input_mean) / expanded_input_std
 
         return normalized_input[idx: idx + self.length_sque], normalized_target[idx + self.length_sque - 1]
 
@@ -83,14 +79,19 @@ class SmartBedDataset_Base(Dataset):
         all_inputs = [torch.load(file_name) for file_name in input_files_path]
         all_targets = [torch.load(file_name) for file_name in target_files_path]
 
+        all_input_data = torch.cat(all_inputs, dim=0)
+        input_mean = all_input_data.mean(dim=[0, 2, 3])
+        input_std = all_input_data.std(dim=[0, 2, 3])
+
+        input_std[input_std == 0] = 1e-8
+        expanded_input_mean = input_mean.unsqueeze(1).unsqueeze(2)
+        expanded_input_std = input_std.unsqueeze(1).unsqueeze(2)
+
         all_target_data = torch.cat(all_targets, dim=0)
         target_mean = all_target_data.mean()
         target_std = all_target_data.std()
 
-        all_input_data = torch.cat(all_inputs, dim=0)
-        input_mean = all_input_data.mean(dim=[0, 2, 3])
-        input_std = all_input_data.std(dim=[0, 2, 3])
-        return all_inputs, all_targets, target_mean, target_std, input_mean, input_std
+        return all_inputs, all_targets, expanded_input_mean, expanded_input_std, target_mean, target_std
 
     def denormalize(self, np_array):
         denormalized_data = np_array * self.target_std.numpy() + self.target_mean.numpy()
@@ -123,10 +124,10 @@ class SmartBedDataset_Train(SmartBedDataset_Base):
         else:
             raise NotImplementedError("Wrong Model!")
 
-        self.target_mean = ori_dataset.target_mean
-        self.target_std = ori_dataset.target_std
         self.input_mean = ori_dataset.input_mean
         self.input_std = ori_dataset.input_std
+        self.target_mean = ori_dataset.target_mean
+        self.target_std = ori_dataset.target_std
 
         # test code
         # print(len(self.idxs))
