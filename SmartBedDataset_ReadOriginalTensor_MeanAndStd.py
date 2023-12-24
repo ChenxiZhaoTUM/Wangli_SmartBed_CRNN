@@ -55,43 +55,45 @@ class SmartBedDataset_Base(Dataset):
             else:
                 file_idx += 1
                 idx -= length
-        data_now_input = self.all_inputs[file_idx]
-        data_now_target = self.all_targets[file_idx]
-        # print(data_now_input[idx: idx + self.length_sque].shape)
+        with torch.no_grad():
+            data_now_input = self.all_inputs[file_idx]
+            data_now_target = self.all_targets[file_idx]
+            # print(data_now_input[idx: idx + self.length_sque].shape)
 
-        normalized_input = (data_now_input - self.input_mean) / self.input_std
-        normalized_target = (data_now_target - self.target_mean) / self.target_std
+            normalized_input = (data_now_input[idx: idx + self.length_sque] - self.input_mean) / self.input_std
+            normalized_target = (data_now_target[idx + self.length_sque - 1] - self.target_mean) / self.target_std
 
-        return normalized_input[idx: idx + self.length_sque], normalized_target[idx + self.length_sque - 1]
+        return normalized_input, normalized_target
 
     def TensorLoader(self):
-        input_files_path = []
-        target_files_path = []
+        with torch.no_grad():
+            input_files_path = []
+            target_files_path = []
 
-        files = [file for file in os.listdir(self.folder_path) if "inputs" in file]
-        for file in files:
-            input_file_path = os.path.join(self.folder_path, file)
-            target_file_path = os.path.join(self.folder_path, file.replace('inputs', 'targets'))
-            input_files_path.append(input_file_path)
-            target_files_path.append(target_file_path)
-        # print(input_files_path)  # test code for file names
+            files = [file for file in os.listdir(self.folder_path) if "inputs" in file]
+            for file in files:
+                input_file_path = os.path.join(self.folder_path, file)
+                target_file_path = os.path.join(self.folder_path, file.replace('inputs', 'targets'))
+                input_files_path.append(input_file_path)
+                target_files_path.append(target_file_path)
+            # print(input_files_path)  # test code for file names
 
-        all_inputs = [torch.load(file_name) for file_name in input_files_path]
-        all_targets = [torch.load(file_name) for file_name in target_files_path]
+            all_inputs = [torch.load(file_name).float() for file_name in input_files_path]
+            all_targets = [torch.load(file_name).float() for file_name in target_files_path]
 
-        all_input_data = torch.cat(all_inputs, dim=0)
-        input_mean = all_input_data.mean(dim=[0, 2, 3])
-        input_std = all_input_data.std(dim=[0, 2, 3])
+            all_input_data = torch.cat(all_inputs, dim=0)
+            input_mean = all_input_data.mean(dim=[0, 2, 3])
+            input_std = all_input_data.std(dim=[0, 2, 3])
 
-        input_std[input_std == 0] = 1e-8
-        expanded_input_mean = input_mean.unsqueeze(1).unsqueeze(2)
-        expanded_input_std = input_std.unsqueeze(1).unsqueeze(2)
+            input_std[input_std == 0] = 1e-8
+            expanded_input_mean = input_mean.unsqueeze(1).unsqueeze(2)
+            expanded_input_std = input_std.unsqueeze(1).unsqueeze(2)
 
-        all_target_data = torch.cat(all_targets, dim=0)
-        target_mean = all_target_data.mean()
-        target_std = all_target_data.std()
+            all_target_data = torch.cat(all_targets, dim=0)
+            target_mean = all_target_data.mean()
+            target_std = all_target_data.std()
 
-        return all_inputs, all_targets, expanded_input_mean, expanded_input_std, target_mean, target_std
+            return all_inputs, all_targets, expanded_input_mean, expanded_input_std, target_mean, target_std
 
     def denormalize(self, np_array):
         denormalized_data = np_array * self.target_std.numpy() + self.target_mean.numpy()
@@ -183,10 +185,10 @@ if __name__ == '__main__':
     print(f"target_mean: {train_dataset.target_mean}")
     print(f"target_std: {train_dataset.target_std}")
 
-    input_mean = torch.load('dataset/saved_tensor_for_train/input_mean.pt')
-    input_std = torch.load('dataset/saved_tensor_for_train/input_std.pt')
-    target_mean = torch.load('dataset/saved_tensor_for_train/target_mean.pt')
-    target_std = torch.load('dataset/saved_tensor_for_train/target_std.pt')
+    input_mean = torch.load('dataset/saved_tensor_for_train/input_mean.pt').float()
+    input_std = torch.load('dataset/saved_tensor_for_train/input_std.pt').float()
+    target_mean = torch.load('dataset/saved_tensor_for_train/target_mean.pt').float()
+    target_std = torch.load('dataset/saved_tensor_for_train/target_std.pt').float()
     test_dataset = SmartBedDataset_Test(raw_dataset, model="test", input_mean=input_mean, input_std=input_std,
                                         target_mean=target_mean, target_std=target_std)
 

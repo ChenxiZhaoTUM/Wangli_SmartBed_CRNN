@@ -75,6 +75,10 @@ netG.to(device)
 
 criterionMSELoss = nn.MSELoss()
 optimizer = optim.Adam(netG.parameters(), lr=lrG, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+scheduler = torch.optim.lr_scheduler.LambdaLR(
+    optimizer,
+    lr_lambda=utils.get_cosine_lambda(lrG, final_lr=1.0e-04, epochs=epochs, warmup_epoch=0)
+)
 
 ##### training begins #####
 for epoch in range(epochs):
@@ -87,28 +91,18 @@ for epoch in range(epochs):
         inputs_cpu, targets_cpu = traindata
         inputs, targets = inputs_cpu.to(device), targets_cpu.to(device)
 
-        # test code
-        # print(i)
-        # print(inputs_cpu.size())  # torch.Size([50, 10, 12, 32, 64])
-        # print(targets_cpu.size())  # torch.Size([50, 1, 32, 64])
-
-        # # compute LR decay
-        # if decayLr:
-        #     currLr = utils.computeLR(epoch, epochs, lrG * 0.1, lrG)
-        #     if currLr < lrG:
-        #         for g in optimizer.param_groups:
-        #             g['lr'] = currLr
-
         gen_out = netG(inputs)
         gen_out_cpu = gen_out.data.cpu().numpy()
 
-        gen_out = gen_out.float()
-        targets = targets.float()
+        #gen_out = gen_out.float()
+        #targets = targets.float()
 
         loss = criterionMSELoss(gen_out, targets)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        scheduler.step()
 
         MSELossViz = loss.item()
         MSELoss_accum += MSELossViz
@@ -117,11 +111,11 @@ for epoch in range(epochs):
             logline = "Epoch: {}, batch-idx: {}, MSELoss: {}, Learning rate: {}\n".format(epoch, i, MSELossViz, lrG)
             print(logline)
 
-        targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
-        outputs_denormalized = raw_dataset.denormalize(gen_out_cpu)
-
         random_indices = random.sample(range(len(trainLoader)), 10)
         if epoch % 500 == 0 and i in random_indices:
+            targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
+            outputs_denormalized = raw_dataset.denormalize(gen_out_cpu)
+
             for j in range(batch_size):
                 utils.makeDirs(["TRAIN_CRNN_expo4_mean_01"])
                 utils.imageOut("TRAIN_CRNN_expo4_mean_01/epoch{}_{}_{}".format(epoch, i, j), inputs_cpu[j],
@@ -140,18 +134,15 @@ for epoch in range(epochs):
             outputs = netG(inputs)
             outputs_cpu = outputs.data.cpu().numpy()
 
-            outputs = outputs.float()
-            targets = targets.float()
-
             loss = criterionMSELoss(outputs, targets)
             MSELossViz = loss.item()
             MSELossVal_accum += MSELossViz
 
-            targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
-            outputs_denormalized = raw_dataset.denormalize(outputs_cpu)
-
             random_indices = random.sample(range(len(valiLoader)), 10)
             if epoch % 500 == 0 and i in random_indices:
+                targets_denormalized = raw_dataset.denormalize(targets_cpu.cpu().numpy())
+                outputs_denormalized = raw_dataset.denormalize(outputs_cpu)
+
                 for j in range(batch_size):
                     utils.makeDirs(["VALIDATION_CRNN_expo4_mean_01"])
                     utils.imageOut("VALIDATION_CRNN_expo4_mean_01/epoch{}_{}_{}".format(epoch, i, j), inputs_cpu[j],

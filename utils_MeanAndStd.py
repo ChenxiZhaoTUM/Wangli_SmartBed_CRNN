@@ -3,6 +3,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
+#NOTE: the range of the lambda output should be [0,1]                   
+def get_cosine_lambda(initial_lr,final_lr,epochs,warmup_epoch):
+    """
+    Returns a lambda function that calculates the learning rate based on the cosine schedule.
+
+    Args:
+        initial_lr (float): The initial learning rate.
+        final_lr (float): The final learning rate.
+        epochs (int): The total number of epochs.
+        warmup_epoch (int): The number of warm-up epochs.
+
+    Returns:
+        function: The lambda function that calculates the learning rate.
+    """
+    def cosine_lambda(idx_epoch):
+        if idx_epoch < warmup_epoch:
+            return idx_epoch / warmup_epoch
+        else:
+            return 1-(1-(math.cos((idx_epoch-warmup_epoch)/(epochs-warmup_epoch)*math.pi)+1)/2)*(1-final_lr/initial_lr)
+    return cosine_lambda
 
 # compute learning rate with decay in second half
 def computeLR(i, epochs, minLR, maxLR):
