@@ -68,31 +68,33 @@ def process_sleep_values(line):
     return time, []
 
 
-def change_dimension(input_data_arr, input_sleep_data_arr):
-    input_data_arr_norm = []
-    if len(input_data_arr) > 0:
-        for input_value in input_data_arr:
-            normalized_input_data = input_value / 4096
-            input_data_arr_norm.append(normalized_input_data)
-        input_data_arr_norm = np.array(input_data_arr_norm)
-
+def change_input_dimension(input_data_arr, input_sleep_data_arr):
     new_input_data = torch.zeros(12, 32, 64)
 
     for ch in range(11):
         new_input_data[ch, :, :] = torch.tensor(input_sleep_data_arr[ch])  # input_sleep_data to 11 channels
 
     for j in range(16):
-        new_input_data[11, :, j * 4: (j + 1) * 4] = torch.tensor(input_data_arr_norm[j])
+        new_input_data[11, :, j * 4: (j + 1) * 4] = torch.tensor(input_data_arr[j])
 
     return new_input_data
 
 
-def denormalize(np_array):
-    target_max = 60
-    target_min = 0
-    denormalized_data = np_array * (target_max - target_min) + target_min
+input_mean = torch.load('model_for_realtime/input_mean.pt')
+input_std = torch.load('model_for_realtime/input_std.pt')
+target_mean = torch.load('model_for_realtime/target_mean.pt')
+target_std = torch.load('model_for_realtime/target_std.pt')
 
-    output_clipped = np.clip(denormalized_data, a_min=0, a_max=None)
+
+def input_normalization(input_tensor):
+    normalized_input = (input_tensor - input_mean) / input_std
+    return normalized_input
+
+
+def output_denormalization(np_array):
+    denormalized_output = np_array * target_std.numpy() + target_mean.numpy()
+
+    output_clipped = np.clip(denormalized_output, a_min=0, a_max=None)
     return output_clipped
 
 
@@ -101,11 +103,12 @@ def imageOut(filename, _input, _output, max_val=40, min_val=0):
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
 
     last_channel = _input[-1, -1, :, :]
+    last_channel = last_channel * input_std[-1] + input_mean[-1]
     last_channel = np.delete(last_channel, [4 * i + 3 for i in range(16)], axis=1)
     last_channel = np.concatenate((last_channel, np.zeros((32, 16))), axis=1)
     last_channel_image = np.reshape(last_channel, (32, 64))
     ax1.set_aspect('equal', 'box')
-    im1 = ax1.imshow(last_channel_image, cmap='jet', vmin=0, vmax=0.6)
+    im1 = ax1.imshow(last_channel_image, cmap='jet', vmin=0, vmax=2500)
     ax1.axis('off')
     cbar1 = fig.colorbar(im1, ax=ax1)
 
@@ -126,7 +129,7 @@ output_dir = "TEST"
 os.makedirs(output_dir, exist_ok=True)
 
 netG = CRNN(channelExponent=4, dropout=0.0)
-doLoad = "./CRNN_expo4_02_model"
+doLoad = "model_for_realtime/CRNN_expo4_mean_01_10000model"
 if len(doLoad) > 0:
     netG.load_state_dict(torch.load(doLoad, map_location=torch.device('cpu')))
 netG.to(device)
@@ -180,14 +183,15 @@ def result_of_CRNN(pressure_line, sleep_line):
     sleep_seconds = sleep_time.split(':')[2].split('.')[0]
 
     if pressure_seconds == sleep_seconds:
-        input_tensor = change_dimension(pressure_value, sleep_value)
+        input_tensor = change_input_dimension(pressure_value, sleep_value)
+        normalized_input = input_normalization(input_tensor)
 
         # If the list already has ten tensors, remove the first one
         if len(global_tensor_list) >= 10:
             global_tensor_list.pop(0)
 
         # Add the new tensor to the list
-        global_tensor_list.append(input_tensor)
+        global_tensor_list.append(normalized_input)
 
         if len(global_tensor_list) == 10:
             combined_tensor = torch.stack(global_tensor_list, dim=0)  # [10, 12, 32, 64]
@@ -198,9 +202,9 @@ def result_of_CRNN(pressure_line, sleep_line):
             output = netG(combined_tensor)
             output[output < 0] = 0
             # print(f"Output tensor shape: {output.shape}")
-            output_denormalize = denormalize(output.detach().numpy())
+            denormalized_output = output_denormalization(output.detach().numpy())
 
-            return combined_tensor, output_denormalize
+            return combined_tensor, denormalized_output
 
     return None
 
@@ -210,10 +214,10 @@ for pressure_line in pressure_lines:
         result = result_of_CRNN(pressure_line, sleep_line)
 
         if result is not None:
-            input_tensor, output_denormalize = result
+            input, output = result
 
             os.chdir("./TEST/")
-            imageOut("%04d" % i, input_tensor[0], output_denormalize[0])
+            imageOut("%04d" % i, input[0], output[0])
             os.chdir("../")
             i += 1
 
