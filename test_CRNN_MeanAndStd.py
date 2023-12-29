@@ -10,14 +10,14 @@ import utils
 use_cuda = torch.cuda.is_available()  # check if GPU exists
 device = torch.device("cuda" if use_cuda else "cpu")  # use CPU or GPU
 
-prefix = "CRNN_expo4_02_model"
+prefix = "CRNN_expo4_mean_01_model"
 if len(sys.argv) > 1:
     prefix = sys.argv[1]
     print("Output prefix: {}".format(prefix))
 
 suffix = ""
 lf = "./" + prefix + "_testout{}.txt".format(suffix)
-output_dir = "TEST_CRNN_expo4_02"
+output_dir = "TEST_CRNN_expo4_mean_01"
 os.makedirs(output_dir, exist_ok=True)
 
 ##### basic settings #####
@@ -35,17 +35,17 @@ input_std = torch.load('dataset/saved_tensor_for_train/input_std.pt')
 target_mean = torch.load('dataset/saved_tensor_for_train/target_mean.pt')
 target_std = torch.load('dataset/saved_tensor_for_train/target_std.pt')
 
-raw_dataset = SmartBedDataset_Base(time_step=time_step)
-raw_dataset = SmartBedDataset_Test(raw_dataset, model="test", input_mean=input_mean, input_std=input_std,
+raw_dataset = SmartBedDataset_Base(mode=SmartBedDataset_Base.TEST, time_step=time_step)
+test_dataset = SmartBedDataset_Test(raw_dataset, input_mean=input_mean, input_std=input_std,
                                    target_mean=target_mean, target_std=target_std)
-testLoader = DataLoader(raw_dataset, batch_size=1, shuffle=False)
+testLoader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 print("Test batches: {}".format(len(testLoader)))
 
 ##### setup network #####
 netG = CRNN(channelExponent=expo, dropout=dropout)
 print(netG)
 
-doLoad = "./CRNN_expo4_02_model"
+doLoad = "./CRNN_expo4_mean_01_10000model"
 if len(doLoad) > 0:
     netG.load_state_dict(torch.load(doLoad, map_location=torch.device('cpu')))
     print("Loaded model " + doLoad)
@@ -66,9 +66,6 @@ with torch.no_grad():
         outputs = netG(inputs)
         outputs_cpu = outputs.data.cpu().numpy()
         targets_cpu = targets.data.cpu().numpy()
-
-        outputs = outputs.float()
-        targets = targets.float()
 
         loss = criterionMSELoss(outputs, targets)
         MSELossViz = loss.item()
@@ -94,7 +91,7 @@ with torch.no_grad():
         MSELossTest_dn = criterionMSELoss(outputs_dn, targets_dn)
         MSELossTest_dn_accum += MSELossTest_dn.item()
 
-        os.chdir("./TEST_CRNN_expo4_02/")
+        os.chdir("./TEST_CRNN_expo4_mean_01/")
         utils.imageOut("%04d" % i, inputs_cpu[0], targets_denormalized[0], outputs_denormalized[0])
         os.chdir("../")
 

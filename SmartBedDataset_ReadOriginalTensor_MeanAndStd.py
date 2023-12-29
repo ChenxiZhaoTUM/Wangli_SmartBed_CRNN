@@ -144,13 +144,8 @@ class SmartBedDataset_Train(SmartBedDataset_Base):
 
 class SmartBedDataset_Test(SmartBedDataset_Base):
     # for divide train data into train and validation (70% data in one file for train)
-    def __init__(self, ori_dataset, model, input_mean, input_std, target_mean, target_std):
+    def __init__(self, ori_dataset, input_mean, input_std, target_mean, target_std):
         self.data_set = ori_dataset
-
-        if model == "test":
-            pass
-        else:
-            raise NotImplementedError("Wrong Model!")
 
         self.input_mean = input_mean
         self.input_std = input_std
@@ -189,7 +184,7 @@ if __name__ == '__main__':
     input_std = torch.load('dataset/saved_tensor_for_train/input_std.pt').float()
     target_mean = torch.load('dataset/saved_tensor_for_train/target_mean.pt').float()
     target_std = torch.load('dataset/saved_tensor_for_train/target_std.pt').float()
-    test_dataset = SmartBedDataset_Test(raw_dataset, model="test", input_mean=input_mean, input_std=input_std,
+    test_dataset = SmartBedDataset_Test(raw_dataset, input_mean=input_mean, input_std=input_std,
                                         target_mean=target_mean, target_std=target_std)
 
     print(test_dataset[0][0].shape)   # torch.Size([10, 12, 32, 64])
