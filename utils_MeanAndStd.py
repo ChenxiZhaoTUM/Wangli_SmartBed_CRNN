@@ -43,10 +43,10 @@ def makeDirs(directoryList):
             os.makedirs(directory)
 
 
-input_mean = torch.load('dataset/saved_tensor_for_train/input_mean.pt')
-input_std = torch.load('dataset/saved_tensor_for_train/input_std.pt')
-
 def imageOut(filename, _input, _target, _output, max_val=40, min_val=0):
+    input_mean = torch.load('dataset/saved_tensor_for_train/input_mean.pt')
+    input_std = torch.load('dataset/saved_tensor_for_train/input_std.pt')
+
     target = np.copy(_target)
     output = np.copy(_output)
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
