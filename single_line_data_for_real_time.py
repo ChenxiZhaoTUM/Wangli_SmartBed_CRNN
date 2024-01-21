@@ -123,11 +123,12 @@ def imageOut(filename, _input, _output, max_val=40, min_val=0):
     plt.savefig(save_path)
     plt.close(fig)
 
-def load_model(): #20240112 CJ
+
+def load_model():  # 20240112 CJ
     # load trained CRNN model
     output_dir = "./TEST"
     os.makedirs(output_dir, exist_ok=True)
-    
+
     netG = CRNN(channelExponent=4, dropout=0.0)
     doLoad = "model_for_realtime/CRNN_expo4_mean_01_10000model"
     if len(doLoad) > 0:
@@ -135,6 +136,7 @@ def load_model(): #20240112 CJ
     netG.to(device)
     netG.eval()
     return netG
+
 
 # test model loaded
 # layer1 = netG.layer1
@@ -172,6 +174,7 @@ def load_model(): #20240112 CJ
 # List to store individual tensors, maintaining a rolling window of ten tensors
 global_tensor_list = []
 i = 0
+netG = load_model()
 
 
 def result_of_CRNN(pressure_line, sleep_line):
@@ -209,24 +212,25 @@ def result_of_CRNN(pressure_line, sleep_line):
 
     return None
 
-def LowPressureData2img(model,pressure_lines,sleep_lines):  #20240112 CJ
-    result = result_of_CRNN(model,pressure_lines, sleep_lines)
+
+def LowPressureData2img(model, pressure_lines, sleep_lines):  # 20240112 CJ
+    result = result_of_CRNN(model, pressure_lines, sleep_lines)
     if result is not None:
         input_tensor, output_denormalize = result
         output_image = np.reshape(output_denormalize[0], (32, 64))
-        output_image1=cv2.resize(output_image,(640,320))
+        output_image1 = cv2.resize(output_image, (640, 320))
         cv2.imshow('pressure distribution', output_image1)
-        #cv2.imshow(output_image)
+        # cv2.imshow(output_image)
 
         os.chdir("./TEST/")
         current_time = datetime.datetime.now()
-        strdispaly=current_time.strftime("%Y-%m-%d_%H-%M-%S")
+        strdispaly = current_time.strftime("%Y-%m-%d_%H-%M-%S")
         imageOut(strdispaly, input_tensor[0], output_denormalize[0])
         os.chdir("../")
         if cv2.waitKey(1) & 0xFF == ord('q'):
-            return      
+            return
 
-# for pressure_line in pressure_lines:    #20240112 CJ
+        # for pressure_line in pressure_lines:    #20240112 CJ
 #     for sleep_line in sleep_lines:
 #         result = result_of_CRNN(pressure_line, sleep_line)
 
