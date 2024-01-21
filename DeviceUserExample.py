@@ -117,7 +117,7 @@ class UserExample:
                 # QMessageBox.critical(self, "Cmd Error", "write fail")
                 self.cmdLock.release()
                 return False
-            if cmdAckEvent.wait(1.0) == True:
+            if cmdAckEvent.wait(1.0):
                 cmdAckEvent.clear()
                 self.cmdLock.release()
                 print("cmd ack ok")
@@ -164,7 +164,7 @@ class UserExample:
 if __name__ == "__main__":
     userExample = UserExample()
     userExample.port_open()
-    if (userExample.ser.is_open):
+    if userExample.ser.is_open:
 
         '''
         #气囊控制
@@ -194,7 +194,7 @@ if __name__ == "__main__":
         intervalTime = 500  # 监测间隔（500 - 5000）
         checkMap = 0XFFFF
         cmdPacketData = DeviceUserProtocolHandle.airPressCtlPacketSend(intervalTime, checkMap)
-        if userExample.cmdPacketExec(cmdPacketData) == False:
+        if not userExample.cmdPacketExec(cmdPacketData):
             print("Cmd Error", "指令无应答")
         else:
             print("Cmd success")
