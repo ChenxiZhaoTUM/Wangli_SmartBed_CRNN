@@ -89,7 +89,7 @@ class ProtocolDatasFIFO:
         # 协议包解析
         start_byte = None
         index = 0
-        while (self.get_fifo_length()):
+        while self.get_fifo_length():
             # 从FIFO中读取字节，直到找到起始字节0xA5
             data = self.peek(index)
             if data == 0xA5:
@@ -98,7 +98,7 @@ class ProtocolDatasFIFO:
                 break
             else:
                 self.dequeue()
-                if (self.get_fifo_length() == 0):
+                if self.get_fifo_length() == 0:
                     print("Not found start byte")
                     return -1
 
@@ -165,7 +165,7 @@ def PacketGeneration(cmd, data, dataLen):
     sendData[0] = 0xA5
     sendData[1] = dataLen + 5
     sendData[2] = cmd
-    if (dataLen):
+    if dataLen:
         for i in range(dataLen):
             sendData[3 + i] = data[i]
 

@@ -17,7 +17,7 @@ class userUartReceive:
         self.uartReceiveThread = Thread(target=self.uartReceiveTask)
 
     def port_open(self):
-        self.ser.port = 'COM22'
+        self.ser.port = 'COM4'
         self.ser.baudrate = 115200
         self.ser.inter_byte_timeout = 0.01
         self.ser.timeout = 2

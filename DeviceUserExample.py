@@ -37,7 +37,7 @@ class packetHandleThread(QThread):
         self.wait()
 
     def run(self):
-        while (True):
+        while True:
             data = uartFifo.get()
             print("packetHandleTask  packet data:", data.hex())
             if len(data) == 0:
@@ -70,7 +70,7 @@ class packetHandleThread(QThread):
                             cmdAckEvent.set()
 
 
-class UserExample:
+class UserExample():
     def __init__(self, parent=None):
         # super().__init__(parent)
         self.cmdLock = Lock()
@@ -128,7 +128,7 @@ class UserExample:
 
     # 打开串口
     def port_open(self):
-        self.ser.port = 'COM26'
+        self.ser.port = 'COM3'
         self.ser.baudrate = 115200
         self.ser.inter_byte_timeout = 0.01
         self.ser.timeout = 2
