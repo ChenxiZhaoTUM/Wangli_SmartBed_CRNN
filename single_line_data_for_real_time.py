@@ -74,58 +74,34 @@ def process_sleep_values(line):
 
 
 #
-def change_dimension(input_data_arr, input_sleep_data_arr):
-    input_data_arr_norm = []  # 压力数据归一化（0-1）
-    if len(input_data_arr) > 0:
-        for input_value in input_data_arr:
-            normalized_input_data = input_value / 4096
-            input_data_arr_norm.append(normalized_input_data)
-        input_data_arr_norm = np.array(input_data_arr_norm)
-
+def change_input_dimension(input_data_arr, input_sleep_data_arr):
     new_input_data = torch.zeros(12, 32, 64)
 
     for ch in range(11):
         new_input_data[ch, :, :] = torch.tensor(input_sleep_data_arr[ch])  # input_sleep_data to 11 channels
 
     for j in range(16):
-        new_input_data[11, :, j * 4: (j + 1) * 4] = torch.tensor(input_data_arr_norm[j])  # 传入压力数据，占用一个通道
+        new_input_data[11, :, j * 4: (j + 1) * 4] = torch.tensor(input_data_arr[j])
 
     return new_input_data
 
 
-def denormalize(np_array):
-    target_max = 60
-    target_min = 0
-    denormalized_data = np_array * (target_max - target_min) + target_min
+input_mean = torch.load('model_for_realtime/input_mean.pt')
+input_std = torch.load('model_for_realtime/input_std.pt')
+target_mean = torch.load('model_for_realtime/target_mean.pt')
+target_std = torch.load('model_for_realtime/target_std.pt')
 
-    output_clipped = np.clip(denormalized_data, a_min=0, a_max=None)
+
+def input_normalization(input_tensor):
+    normalized_input = (input_tensor - input_mean) / input_std
+    return normalized_input
+
+
+def output_denormalization(np_array):
+    denormalized_output = np_array * target_std.numpy() + target_mean.numpy()
+
+    output_clipped = np.clip(denormalized_output, a_min=0, a_max=None)
     return output_clipped
-
-
-# 模型输出的图像
-def imageOut(filename, _input, _output, max_val=40, min_val=0):
-    output = np.copy(_output)
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
-
-    last_channel = _input[-1, -1, :, :]
-    last_channel = np.delete(last_channel, [4 * i + 3 for i in range(16)], axis=1)
-    last_channel = np.concatenate((last_channel, np.zeros((32, 16))), axis=1)
-    last_channel_image = np.reshape(last_channel, (32, 64))
-    ax1.set_aspect('equal', 'box')
-    im1 = ax1.imshow(last_channel_image, cmap='jet', vmin=0, vmax=0.6)
-    ax1.axis('off')
-    cbar1 = fig.colorbar(im1, ax=ax1)
-
-    ax2.set_aspect('equal', 'box')
-    output_image = np.reshape(output, (32, 64))
-    im2 = ax2.imshow(output_image, cmap='jet', vmin=min_val, vmax=max_val)
-    ax2.axis('off')
-    cbar2 = fig.colorbar(im2, ax=ax2)
-
-    plt.tight_layout()
-    save_path = os.path.join(filename)
-    plt.savefig(save_path)
-    plt.close(fig)
 
 
 # List to store individual tensors, maintaining a rolling window of ten tensors
@@ -142,14 +118,15 @@ def result_of_CRNN(model, pressure_line, sleep_line):
     sleep_seconds = sleep_time.split(':')[2].split('.')[0]
 
     if pressure_seconds == sleep_seconds:
-        input_tensor = change_dimension(pressure_value, sleep_value)
+        input_tensor = change_input_dimension(pressure_value, sleep_value)
+        normalized_input = input_normalization(input_tensor)
 
         # If the list already has ten tensors, remove the first one
         if len(global_tensor_list) >= 10:
             global_tensor_list.pop(0)
 
         # Add the new tensor to the list
-        global_tensor_list.append(input_tensor)
+        global_tensor_list.append(normalized_input)
 
         if len(global_tensor_list) == 10:
             combined_tensor = torch.stack(global_tensor_list, dim=0)  # [10, 12, 32, 64]
@@ -158,10 +135,11 @@ def result_of_CRNN(model, pressure_line, sleep_line):
             # print(f"Combined tensor shape: {combined_tensor.shape}")
 
             output = model(combined_tensor)
+            output[output < 0] = 0
             # print(f"Output tensor shape: {output.shape}")
-            output_denormalize = denormalize(output.detach().numpy())
+            denormalized_output = output_denormalization(output.detach().numpy())
 
-            return combined_tensor, output_denormalize
+            return combined_tensor, denormalized_output
 
     return None
 
@@ -172,7 +150,7 @@ def load_model():
     os.makedirs(output_dir, exist_ok=True)
 
     netG = CRNN(channelExponent=4, dropout=0.0)
-    doLoad = "./CRNN_expo4_02_model"
+    doLoad = "model_for_realtime/CRNN_expo4_mean_01_10000model"
     if len(doLoad) > 0:
         netG.load_state_dict(torch.load(doLoad, map_location=torch.device('cpu')))
     netG.to(device)
@@ -198,38 +176,67 @@ def load_model():
 #             return
 
 
-def LowPressureData2img(model, pressure_lines, sleep_lines):
-    result = result_of_CRNN(model, pressure_lines, sleep_lines)
+def LowPressureData2img(model, pressure_line, sleep_line):
+    result = result_of_CRNN(model, pressure_line, sleep_line)
     if result is not None:
         input_tensor, output_denormalize = result
-        output_image = np.reshape(output_denormalize[0], (32, 64))
 
+        output_image = np.reshape(output_denormalize[0], (32, 64))
         normalized_image = cv2.normalize(output_image, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+
         color_image = cv2.applyColorMap(normalized_image, cv2.COLORMAP_JET)
-        resized_color_image = cv2.resize(color_image, (640, 320), interpolation=cv2.INTER_CUBIC)
-        cv2.imshow('pressure distribution', resized_color_image)
+        # resized_color_image = cv2.resize(color_image, (64, 32), interpolation=cv2.INTER_CUBIC)
+        # smoothed_image = cv2.GaussianBlur(color_image, (3, 3), 0)
+        smoothed_image = cv2.bilateralFilter(color_image, 9, 75, 75)
+        cv2.imshow('pressure distribution', smoothed_image)
 
         os.chdir("./TEST/")
         current_time = datetime.datetime.now()
         strdispaly = current_time.strftime("%Y-%m-%d_%H-%M-%S")
-
-        cv2.imwrite(strdispaly + "_pressure_distribution.png", resized_color_image)
-
+        cv2.imwrite(strdispaly + "_pressure_distribution.png", smoothed_image)
         os.chdir("../")
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             return
+
+
+def imageOut(filename, _input, _output, max_val=40, min_val=0):
+    output = np.copy(_output)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
+
+    last_channel = _input[-1, -1, :, :]
+    last_channel = last_channel * input_std[-1] + input_mean[-1]
+    last_channel = np.delete(last_channel, [4 * i + 3 for i in range(16)], axis=1)
+    last_channel = np.concatenate((last_channel, np.zeros((32, 16))), axis=1)
+    last_channel_image = np.reshape(last_channel, (32, 64))
+    ax1.set_aspect('equal', 'box')
+    im1 = ax1.imshow(last_channel_image, cmap='jet', vmin=0, vmax=2500)
+    ax1.axis('off')
+    cbar1 = fig.colorbar(im1, ax=ax1)
+
+    ax2.set_aspect('equal', 'box')
+    output_image = np.reshape(output, (32, 64))
+    im2 = ax2.imshow(output_image, cmap='jet', vmin=min_val, vmax=max_val)
+    ax2.axis('off')
+    cbar2 = fig.colorbar(im2, ax=ax2)
+
+    plt.tight_layout()
+    save_path = os.path.join(filename)
+    plt.savefig(save_path)
+    plt.close(fig)
 
 
 def test():
     i = 0
     netG = load_model()
+
     # test model loaded
-    layer1 = netG.layer1
-    layer1_conv = layer1.layer1_conv
-    print("Parameters of layer 'layer1_conv':")
-    for param in layer1_conv.parameters():
-        print(param.size())
-        print(param.data)
+    # layer1 = netG.layer1
+    # layer1_conv = layer1.layer1_conv
+    # print("Parameters of layer 'layer1_conv':")
+    # for param in layer1_conv.parameters():
+    #     print(param.size())
+    #     print(param.data)
 
     # Artificially given some rows for testing
     pressure_lines = [
@@ -257,20 +264,19 @@ def test():
 
     for pressure_line in pressure_lines:
         for sleep_line in sleep_lines:
-            result = result_of_CRNN(netG, pressure_line, sleep_line)
+            LowPressureData2img(netG, pressure_line, sleep_line)
 
-            if result is not None:
-                input_tensor, output_denormalize = result
+            # result = result_of_CRNN(netG, pressure_line, sleep_line)
+            #
+            # if result is not None:
+            #     input, output = result
+            #
+            #     os.chdir("./TEST/")
+            #     imageOut("%04d" % i, input[0], output[0])
+            #     os.chdir("../")
+            #     i += 1
+            #     print(i)
 
-                os.chdir("./TEST/")
-                imageOut("%04d" % i, input_tensor[0], output_denormalize[0])
-                os.chdir("../")
-                i += 1
 
-                print(i)
-
-    pressure_lines = "[13:37:28.297]AA23FF0F4F0DFF0FB70F110FFF0FFF0FA30EFF0FDD093B08AF05380E140C1B08680E55"
-    sleep_lines = "[13:37:28.530]AB11000000000000FC1300000097093455"
-    LowPressureData2img(pressure_lines, sleep_lines)
-
-    "[13:37:28.297]AA23FF0F4F0DFF0FB70F110FFF0FFF0FA30EFF0FDD093B08AF05380E140C1B08680E55 [13:37:28.530]AB11000000000000FC1300000097093455"
+if __name__ == "__main__":
+    test()
