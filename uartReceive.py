@@ -28,6 +28,7 @@ class userUartReceive:
             return None
 
     def uartReceiveTask(self):
+        global pressDataList
         while True:
             if self.ser.is_open:
                 try:
@@ -46,13 +47,15 @@ class userUartReceive:
                         collect_raw_packet(cData, packet)
                         curData = timestamp + packet.hex().upper()
                         if len(packet) == 35:
-                            if len(pressDataList) < 10:
-                                pressDataList.append(curData)
-                            elif len(pressDataList) == 10:
-                                pressDataList[0:9] = pressDataList[1:-1]
-                                pressDataList[-1] = curData
+                            pressDataList.append(curData)
+                            # if len(pressDataList) < 10:
+                            #     pressDataList.append(curData)
+                            # elif len(pressDataList) == 10:
+                            #     pressDataList[0:9] = pressDataList[1:-1]
+                            #     pressDataList[-1] = curData
                         elif len(packet) == 17:
-                            LowPressureData2img(load_model(), pressDataList[-1], curData)
+                            LowPressureData2img(load_model(), pressDataList, curData)
+                            pressDataList = []
 
             else:
                 time.sleep(0.2)

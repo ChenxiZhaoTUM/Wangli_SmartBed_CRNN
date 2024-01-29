@@ -1,11 +1,11 @@
-import re
-import math, os
-import torch
-import numpy as np
-from model_CRNN import CRNN
-import matplotlib.pyplot as plt
 import datetime as datetime
+import os
+import re
 import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from model_CRNN import CRNN
 
 # pip install torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1 --index-url https://download.pytorch.org/whl/cpu
 use_cuda = torch.cuda.is_available()  # check if GPU exists
@@ -108,38 +108,27 @@ def output_denormalization(np_array):
 global_tensor_list = []
 
 
-def result_of_CRNN(model, pressure_line, sleep_line):
+def result_of_CRNN(model, avg_pressure, sleep_value):
     global global_tensor_list
 
-    pressure_time, pressure_value = process_pressure_values(pressure_line)
-    sleep_time, sleep_value = process_sleep_values(sleep_line)
+    input_tensor = change_input_dimension(avg_pressure, sleep_value)
+    normalized_input = input_normalization(input_tensor)
 
-    pressure_seconds = pressure_time.split(':')[2].split('.')[0]
-    sleep_seconds = sleep_time.split(':')[2].split('.')[0]
+    # Add the new tensor to the list
+    global_tensor_list.append(normalized_input)
 
-    if pressure_seconds == sleep_seconds:
-        input_tensor = change_input_dimension(pressure_value, sleep_value)
-        normalized_input = input_normalization(input_tensor)
+    if len(global_tensor_list) == 10:
+        combined_tensor = torch.stack(global_tensor_list, dim=0)  # [10, 12, 32, 64]
+        # print(combined_tensor[:, :, 1, 1])
+        combined_tensor = combined_tensor.clone().unsqueeze(0)  # [1, 10, 12, 32, 64]
+        # print(f"Combined tensor shape: {combined_tensor.shape}")
 
-        # If the list already has ten tensors, remove the first one
-        if len(global_tensor_list) >= 10:
-            global_tensor_list.pop(0)
+        output = model(combined_tensor)
+        output[output < 0] = 0
+        # print(f"Output tensor shape: {output.shape}")
+        denormalized_output = output_denormalization(output.detach().numpy())
 
-        # Add the new tensor to the list
-        global_tensor_list.append(normalized_input)
-
-        if len(global_tensor_list) == 10:
-            combined_tensor = torch.stack(global_tensor_list, dim=0)  # [10, 12, 32, 64]
-            # print(combined_tensor[:, :, 1, 1])
-            combined_tensor = combined_tensor.clone().unsqueeze(0)  # [1, 10, 12, 32, 64]
-            # print(f"Combined tensor shape: {combined_tensor.shape}")
-
-            output = model(combined_tensor)
-            output[output < 0] = 0
-            # print(f"Output tensor shape: {output.shape}")
-            denormalized_output = output_denormalization(output.detach().numpy())
-
-            return combined_tensor, denormalized_output
+        return combined_tensor, denormalized_output
 
     return None
 
@@ -176,8 +165,18 @@ def load_model():
 #             return
 
 
-def LowPressureData2img(model, pressure_line, sleep_line):
-    result = result_of_CRNN(model, pressure_line, sleep_line)
+def LowPressureData2img(model, pressure_lines, sleep_line):
+    sum_arr = np.zeros(16)
+    num = 0
+    for pressure_line in pressure_lines:
+        pressure_time, pressure_value = process_pressure_values(pressure_line)
+        sum_arr += pressure_value
+        num += 1
+    avg_pressure = sum_arr / num
+
+    sleep_time, sleep_value = process_sleep_values(sleep_line)
+
+    result = result_of_CRNN(model, avg_pressure, sleep_value)
     if result is not None:
         input_tensor, output_denormalize = result
 
@@ -227,10 +226,8 @@ def imageOut(filename, _input, _output, max_val=40, min_val=0):
 
 
 def test():
-    i = 0
-    netG = load_model()
-
     # test model loaded
+    # netG = load_model()
     # layer1 = netG.layer1
     # layer1_conv = layer1.layer1_conv
     # print("Parameters of layer 'layer1_conv':")
@@ -262,20 +259,9 @@ def test():
         "[13:37:31.539]AB110000000000002C1400000097093955"
     ]
 
-    for pressure_line in pressure_lines:
-        for sleep_line in sleep_lines:
-            LowPressureData2img(netG, pressure_line, sleep_line)
+    sleep_line = "[13:37:28.530]AB11000000000000FC1300000097093455"
 
-            # result = result_of_CRNN(netG, pressure_line, sleep_line)
-            #
-            # if result is not None:
-            #     input, output = result
-            #
-            #     os.chdir("./TEST/")
-            #     imageOut("%04d" % i, input[0], output[0])
-            #     os.chdir("../")
-            #     i += 1
-            #     print(i)
+    LowPressureData2img(load_model(), pressure_lines, sleep_line)
 
 
 if __name__ == "__main__":
