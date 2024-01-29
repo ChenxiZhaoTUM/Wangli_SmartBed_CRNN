@@ -123,8 +123,12 @@ def result_of_CRNN(model, avg_pressure, sleep_value):
         combined_tensor = combined_tensor.clone().unsqueeze(0)  # [1, 10, 12, 32, 64]
         # print(f"Combined tensor shape: {combined_tensor.shape}")
 
-        output = model(combined_tensor)
-        output[output < 0] = 0
+        if torch.all(combined_tensor[:, :, 11, :, :] == 0):  # if input_pressure = 0, i.e. nobody on bed
+            output = torch.zeros(1, 32, 64)
+        else:
+            output = model(combined_tensor)
+            output[output < 0] = 0
+
         # print(f"Output tensor shape: {output.shape}")
         denormalized_output = output_denormalization(output.detach().numpy())
 
