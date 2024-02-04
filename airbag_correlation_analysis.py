@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 
 def read_pressure():
-    folder_path = "./files_for_correlation_analysis"
+    folder_path = "./files_for_correlation_analysis/low"
     file_names = os.listdir(folder_path)
 
     data_dic = {}
@@ -66,7 +66,9 @@ def correlation_analysis():
     plt.ylabel('Correlation Coefficient')
     plt.title('Airbag vs Pressure Mat Correlation')
     plt.legend()
+    plt.savefig(f'./files_for_correlation_analysis/low/airbag_lowPresMat_correlation.png')
     plt.show()
+    plt.close()
 
 
 if __name__ == "__main__":
