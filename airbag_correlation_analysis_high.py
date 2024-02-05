@@ -4,6 +4,7 @@ from datetime import datetime
 import numpy as np
 import scipy.stats
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 
 ##### average values by second #####
@@ -176,7 +177,7 @@ def corretion_display():
     for i, correlations in enumerate(correlation_matrix):
         reshaped_correlations = correlations.reshape((32, 64))
         plt.figure(figsize=(10, 5))
-        plt.imshow(reshaped_correlations, cmap='rainbow', interpolation='nearest', vmin=-0.5, vmax=0.5)
+        plt.imshow(np.abs(reshaped_correlations), cmap='rainbow', interpolation='nearest', vmin=0, vmax=0.5)
         plt.colorbar()
         plt.title(f'Correlation Airbag {i + 1} for highPresMat')
         plt.savefig(f'./files_for_correlation_analysis/high/airbag_{i + 1}_highPresMat_correlation.png')
@@ -212,5 +213,45 @@ def corretion_display_3D():
     plt.show()
 
 
+def dynamic_pic(airbag_values, mat_values):
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), gridspec_kw={'height_ratios': [1, 2]})
+    plt.subplots_adjust(left=0.2, right=0.8, top=0.95, bottom=0.05)
+
+    x = np.arange(1, 7)
+    line, = ax1.plot([], [], '-o')
+    ax1.set_xlim(0, 9)
+    ax1.set_ylim(np.min(airbag_values), np.max(airbag_values))
+    ax1.legend()
+    ax1.set_title("Airbag Pressure Values")
+    ax1.set_xlabel("Airbag Number")
+    ax1.set_ylabel("Pressure Value")
+
+    mat_image = np.reshape(mat_values[0], (32, 64))
+    im2 = ax2.imshow(mat_image, cmap='jet', interpolation='bilinear')
+    ax2.axis('off')
+    ax2.set_title("Pressure Mat Values")
+    fig.colorbar(im2, ax=ax2)
+
+    def update(frame):
+        y = airbag_values[frame, :]
+        line.set_data(x, y)
+
+        im2.set_array(mat_values[frame])
+
+    ani = animation.FuncAnimation(fig, update, frames=len(mat_values), interval=100, blit=False)
+
+    plt.tight_layout()
+    plt.show()
+
+
 if __name__ == "__main__":
-    corretion_display()
+    data_dic = read_data()
+
+    airbag_values = np.zeros((len(data_dic), 6))
+    mat_values = np.zeros((len(data_dic), 32, 64))
+
+    for idx, data in data_dic.items():
+        airbag_values[idx, :] = data['airbag_data']
+        mat_values[idx, :, :] = np.reshape(data['mat_data'], (32, 64))
+
+    dynamic_pic(airbag_values, mat_values)
