@@ -1,6 +1,7 @@
-import gym
+import gymnasium as gym
+from gymnasium import spaces
+from gymnasium.envs.registration import register
 import numpy as np
-from gym import spaces
 import serial
 import serial.tools.list_ports
 import DeviceUserProtocolHandle as deviceUser
@@ -208,3 +209,9 @@ class SmartBedEnv(gym.Env):
 
     def __del__(self):
         self.close_serial_port()
+
+
+register(
+    id='SmartBedEnv-v0',
+    entry_point='smart_bed_env:SmartBedEnv',
+)
