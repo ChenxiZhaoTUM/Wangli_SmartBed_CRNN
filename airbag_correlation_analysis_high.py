@@ -177,7 +177,7 @@ def corretion_display():
     for i, correlations in enumerate(correlation_matrix):
         reshaped_correlations = correlations.reshape((32, 64))
         plt.figure(figsize=(10, 5))
-        plt.imshow(np.abs(reshaped_correlations), cmap='rainbow', interpolation='nearest', vmin=0, vmax=0.5)
+        plt.imshow(reshaped_correlations, cmap='rainbow', interpolation='nearest', vmin=-0.5, vmax=0.5)
         plt.colorbar()
         plt.title(f'Correlation Airbag {i + 1} for highPresMat')
         plt.savefig(f'./files_for_correlation_analysis/high/airbag_{i + 1}_highPresMat_correlation.png')
@@ -245,6 +245,8 @@ def dynamic_pic(airbag_values, mat_values):
 
 
 if __name__ == "__main__":
+    # corretion_display()
+
     data_dic = read_data()
 
     airbag_values = np.zeros((len(data_dic), 6))
