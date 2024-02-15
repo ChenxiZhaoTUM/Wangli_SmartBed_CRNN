@@ -33,6 +33,7 @@ class SmartBedEnv(gym.Env):
         self.previous_action = np.zeros(6)  # here need to change to the previous inner pressure of the airbag
 
         # Serial port initialization for communication with the smart bed hardware
+        self.running = True
         self.cmdLock = Lock()
         self.get_uart_ports()
         self.ser = serial.Serial()
@@ -71,7 +72,7 @@ class SmartBedEnv(gym.Env):
             print(f"Error closing serial port: {e}")
 
     def uart_receive_task(self):
-        while True:
+        while self.running:
             if self.ser.is_open:
                 try:
                     data = self.ser.read(10000)
@@ -104,6 +105,11 @@ class SmartBedEnv(gym.Env):
             else:
                 print("cmd ack timeout")
         self.cmdLock.release()
+
+    def stop_threads(self):
+        self.running = False
+        self.uartReceiveThread.join()
+        self.packetParaseThread.join()
 
     def airbag_pressure_display(self, data):
         for i in range(6):
@@ -166,7 +172,7 @@ class SmartBedEnv(gym.Env):
         self.obs = np.zeros(16)  # pressure
         self._get_obs = self.obs.astype(np.float32)
         print('train_obs: ', self._get_obs)
-        return self._get_obs, {}
+        return self._get_obs
 
     def step(self, action):
         reward = 0.0
@@ -178,14 +184,12 @@ class SmartBedEnv(gym.Env):
         # take action of 6 airbags
 
         pressure_values = self.read_pressure_data()
-        if pressure_values is not None:
-            self.obs = pressure_values  # Update pressure in observation
+        if pressure_values is None:
+            print("Failed to read pressure data, skipping step.")
+            return self._get_obs, reward, done, {}
 
-        if self.obs == 0:
-            done = True
-
+        self.obs = pressure_values  # Update pressure in observation
         pressure_variance = np.var(pressure_values)
-
         pressure_change_continuity = np.mean(np.abs(self.previous_pressure_values - pressure_values))
         self.previous_pressure_values = pressure_values.copy()
 
@@ -197,17 +201,20 @@ class SmartBedEnv(gym.Env):
         if pressure_variance == 0:
             reward += 10.0
         else:
-            reward += 1.0 / pressure_variance
+            reward += 1.0 / (pressure_variance + 1)  # prevent division by 0
 
-        reward -= pressure_change_continuity
-        reward -= action_change_continuity
+        reward -= (pressure_change_continuity + action_change_continuity)
 
-        if done:
+        self.total_reward += reward
+
+        if self.obs == 0:
+            done = True
             self.episode += 1
 
-        return self._get_obs, reward, done, False, {}
+        return self._get_obs, reward, done, {}
 
     def __del__(self):
+        self.stop_threads()
         self.close_serial_port()
 
 

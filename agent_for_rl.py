@@ -91,6 +91,11 @@ def train():
 
     print(f"Finished training. Final reward: {result['best_reward']:.2f}")
 
+    envs.stop_threads()
+    envs.close_serial_port()
+    test_envs.stop_threads()
+    test_envs.close_serial_port()
+
 
 if __name__ == "__main__":
     train()
