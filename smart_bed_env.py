@@ -79,7 +79,7 @@ class SmartBedEnv(gym.Env):
                 except:
                     continue
                 t = time.time()
-                print("UartReceiveTask rec data", int(round(t * 1000)), data)
+                # print("UartReceiveTask rec data", int(round(t * 1000)), data)
                 if len(data):
                     uartFifo.put(data)
                     uartPacektFifo.enqueue(data)
@@ -148,20 +148,43 @@ class SmartBedEnv(gym.Env):
         else:
             print("Cmd success!")
 
-    def read_pressure_data(self):
-        # read map pressure
-        if self.ser.in_waiting:
-            rawBytesArr = self.ser.read(self.ser.in_waiting)
-            lowpresDataList = deviceUser.lowPressAnalysis(rawBytesArr)
+    # def read_pressure_data(self):
+    #     # read map pressure
+    #     if self.ser.in_waiting:
+    #         rawBytesArr = self.ser.read(self.ser.in_waiting)
+    #         lowpresDataList = deviceUser.lowPressAnalysis(rawBytesArr)
+    #
+    #         if lowpresDataList is not None:
+    #             print(lowpresDataList)
+    #             return lowpresDataList
+    #         else:
+    #             print("Error processing pressure data.")
+    #             return None
+    #     else:
+    #         print("No data available from serial port.")
+    #         return None
 
-            if lowpresDataList is not None:
-                print(lowpresDataList)
-                return lowpresDataList
+    def read_pressure_data(self):
+        if not self.ser.is_open:
+            print("Serial port is closed!!!!")
+            return None
+
+        try:
+            if self.ser.in_waiting > 0:
+                rawBytesArr = self.ser.read(self.ser.in_waiting)
+                lowpresDataList = deviceUser.lowPressAnalysis(rawBytesArr)
+
+                if lowpresDataList is not None:
+                    print(lowpresDataList)
+                    return lowpresDataList
+                else:
+                    print("Error processing pressure data.")
+                    return None
             else:
-                print("Error processing pressure data.")
+                print("No data available from serial port.")
                 return None
-        else:
-            print("No data available from serial port.")
+        except serial.SerialException as e:
+            print(f"Error reading data: {e}")
             return None
 
     def reset(self, seed=None, options=None):
@@ -172,7 +195,7 @@ class SmartBedEnv(gym.Env):
         self.obs = np.zeros(16)  # pressure
         self._get_obs = self.obs.astype(np.float32)
         print('train_obs: ', self._get_obs)
-        return self._get_obs
+        return self._get_obs, {}
 
     def step(self, action):
         reward = 0.0
@@ -186,7 +209,7 @@ class SmartBedEnv(gym.Env):
         pressure_values = self.read_pressure_data()
         if pressure_values is None:
             print("Failed to read pressure data, skipping step.")
-            return self._get_obs, reward, done, {}
+            return self._get_obs, reward, done, False, {}
 
         self.obs = pressure_values  # Update pressure in observation
         pressure_variance = np.var(pressure_values)
@@ -211,7 +234,7 @@ class SmartBedEnv(gym.Env):
             done = True
             self.episode += 1
 
-        return self._get_obs, reward, done, {}
+        return self._get_obs, reward, done, False, {}
 
     def __del__(self):
         self.stop_threads()

@@ -33,7 +33,7 @@ def collect_raw_packet(rawdata, p_Packet):
         # 从FIFO中读取字节，直到找到起始字节0xA5
         data = rawdata[index]
         if data == 0xAA or data == 0xAB:
-            print("Found start byte:", hex(data))
+            # print("Found start byte:", hex(data))
             index += 1
             start_byte = data
             break

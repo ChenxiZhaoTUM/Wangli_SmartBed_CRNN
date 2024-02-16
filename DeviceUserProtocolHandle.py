@@ -121,12 +121,12 @@ class ProtocolDatasFIFO:
             print("The current packet is incomplete")
             return -4
 
+        # 检查协议包CRC
         last_byte = self.peek(packet_len - 1)
         if last_byte != 0x55:
             print("Warning: Invalid end byte:", hex(last_byte))
             self.dequeue()
             return -5
-        # 检查协议包CRC
 
         # 从FIFO中读取协议包字段
         for i in range(3):
@@ -145,10 +145,10 @@ class ProtocolDatasFIFO:
 
 
 # 校验数据生成
-def CheckSum(data, len):
+def CheckSum(data, length):
     crcNum = 0
-    if len:
-        for i in range(len):
+    if length:
+        for i in range(length):
             crcNum += data[i]
     checkSum = crcNum & 0XFF
     return checkSum
@@ -171,10 +171,10 @@ def PacketGeneration(cmd, data, dataLen):
 
 
 '''
-index:0 右侧气囊 1:左侧气囊
+index: 0:右侧气囊 1:左侧气囊
 action: 1:充气 2:暂停 3:放气
 map: 0-5 bit分别对应小腿、大腿、臀、腰、胸、肩
-time:1-20S 或0XFF(一直充放)
+time: 1-20S 或0XFF(一直充放)
 '''
 
 
@@ -245,7 +245,7 @@ def calculate_press(raw_data):
 
 # 低精度压力反馈
 def lowPressAnalysis(rawBytesArr):
-    if len(rawBytesArr) is not (1 + (2 * 16)):
+    if len(rawBytesArr) != (1 + (2 * 16)):
         print("lowPressAnalysis param err", len(rawBytesArr))
         return None
     cmdParamData = lowPressInfoCmdParam()
@@ -256,7 +256,7 @@ def lowPressAnalysis(rawBytesArr):
     lowpresDataList = [{} for _ in range(16)]
     for i in range(16):
         lowpresDataList[i] = cmdParamData.data[i]
-    print(lowpresDataList)
+    print("lowpresDataList = ", lowpresDataList)
     return lowpresDataList
 
 
@@ -267,7 +267,7 @@ map(2B) 0-5bit表示右侧气囊组气压,8-14bit表示左侧气囊组气压
 
 
 def airPressAnalysis(rawBytesArr):
-    if len(rawBytesArr) is not 2 + (12 * 6):
+    if len(rawBytesArr) != 2 + (12 * 6):
         print("airPressAnalysis param err", len(rawBytesArr))
         return False
     cmdParamData = airPressInfoCmdParam()
@@ -280,7 +280,7 @@ def airPressAnalysis(rawBytesArr):
 
     print("map 0x%x" % cmdParamData.map)
     for i in range(12):
-        print("temp = 0x%x,press = 0x%x" % (cmdParamData.data[i].Temperature, cmdParamData.data[i].AirPress))
+        print("temp = 0x%x, press = 0x%x" % (cmdParamData.data[i].Temperature, cmdParamData.data[i].AirPress))
 
     # 右侧气囊气压计算
     for i in range(6):
@@ -293,10 +293,11 @@ def airPressAnalysis(rawBytesArr):
                 presDataList[i] = 0.0
         else:
             presDataList[i] = 0.0
+
     # 左侧气囊气压计算
     for i in range(6):
         if (cmdParamData.map >> (i + 8)) & 0X01:
-            if cmdParamData.data[i + 6].AirPress is not 0:
+            if cmdParamData.data[i + 6].AirPress != 0:
                 cuePressData = calculate_press(cmdParamData.data[i + 6].AirPress)
                 print("left index:", i, "press:", cuePressData)
                 presDataList[i + 6] = cuePressData
@@ -304,5 +305,5 @@ def airPressAnalysis(rawBytesArr):
                 presDataList[i + 6] = 0.0
         else:
             presDataList[i + 6] = 0.0
-    print(presDataList)
+    print("Airbag pressure: ", presDataList)
     return presDataList

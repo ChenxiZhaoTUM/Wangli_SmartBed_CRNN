@@ -126,6 +126,6 @@ if __name__ == "__main__":
     # data_dic = read_pressure()
     # print(data_dic)
 
-    correlation_analysis()
+    # correlation_analysis()
 
-    # dynamic_pic()
+    dynamic_pic()

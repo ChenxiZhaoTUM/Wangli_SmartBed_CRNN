@@ -7,7 +7,7 @@ from tianshou.env import SubprocVectorEnv
 from tianshou.policy import PPOPolicy
 from tianshou.trainer import onpolicy_trainer
 from tianshou.utils.net.common import ActorCritic, Net
-from tianshou.utils.net.continuous import ActorProb, Critic
+from tianshou.utils.net.discrete import Actor, Critic
 from torch.distributions import Independent, Normal
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
@@ -20,21 +20,22 @@ def make_env():
 
 
 def train():
+    envs = gym.make('SmartBedEnv-v0')
+    test_envs = gym.make('SmartBedEnv-v0')
+
     num_envs = 1
-    envs = SubprocVectorEnv([make_env for _ in range(num_envs)])
-    test_envs = SubprocVectorEnv([make_env for _ in range(num_envs)])
+    # envs = SubprocVectorEnv([make_env for _ in range(num_envs)])
+    # test_envs = SubprocVectorEnv([make_env for _ in range(num_envs)])
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     observation_shape = envs.observation_space.shape or envs.observation_space.n
     action_shape = envs.action_space.shape or envs.action_space.n
 
     net = Net(state_shape=observation_shape, hidden_sizes=[128, 128], activation=nn.Tanh, device=device)
-    actor = ActorProb(net, action_shape, max_action=envs.action_space.high[0], device=device).to(device)
+    actor = Actor(net, action_shape, device=device).to(device)
     net_c = Net(state_shape=observation_shape, hidden_sizes=[128, 128], activation=nn.Tanh, device=device)
     critic = Critic(net_c, device=device).to(device)
     actor_critic = ActorCritic(actor, critic)
-
-    torch.nn.init.constant_(actor.sigma_param, 0.5)
 
     for m in actor_critic.modules():
         if isinstance(m, torch.nn.Linear):
@@ -42,15 +43,18 @@ def train():
             torch.nn.init.orthogonal_(m.weight, gain=np.sqrt(2))
             torch.nn.init.zeros_(m.bias)
 
-    for m in actor.mu.modules():
-        if isinstance(m, torch.nn.Linear):
-            torch.nn.init.zeros_(m.bias)
-            m.weight.data.copy_(0.01 * m.weight.data)
-
     optim = torch.optim.Adam(set(actor.parameters()).union(critic.parameters()), lr=1e-3)
 
-    def dist(*logits):
-        return Independent(Normal(*logits), 1)
+    # def dist(*logits):
+    #     return Independent(Normal(*logits), 1)
+
+    # def dist(logits):
+    #     mean, std = logits
+    #     std = torch.clamp(std, min=1e-6)
+    #     return Independent(Normal(mean, std), 1)
+    def dist(mean):
+        std = torch.ones_like(mean) * 0.5
+        return torch.distributions.Independent(torch.distributions.Normal(mean, std), 1)
 
     lr_scheduler = LambdaLR(optim, lr_lambda=lambda epoch: 1 - epoch / 300)
 
@@ -87,7 +91,7 @@ def train():
 
     result = onpolicy_trainer(policy, train_collector, test_collector,
                               max_epoch=500, step_per_epoch=1000, episode_per_test=10, batch_size=64,
-                              stop_fn=None, save_checkpoint_fn=None, logger=logger)
+                              repeat_per_collect=10, stop_fn=None, save_checkpoint_fn=None, logger=logger)
 
     print(f"Finished training. Final reward: {result['best_reward']:.2f}")
 

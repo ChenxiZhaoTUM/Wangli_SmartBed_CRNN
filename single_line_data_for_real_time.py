@@ -148,7 +148,7 @@ def load_model():
     os.makedirs(output_dir, exist_ok=True)
 
     netG = CRNN(channelExponent=4, dropout=0.0)
-    doLoad = "model_for_realtime/CRNN_expo4_mean_01_10000model"
+    doLoad = "model_for_realtime/CRNN_expo4_mean_04_02_8000model"
     if len(doLoad) > 0:
         netG.load_state_dict(torch.load(doLoad, map_location=torch.device('cpu')))
     netG.to(device)
@@ -165,7 +165,7 @@ def LowPressureData2img(model, pressure_lines, sleep_line):
         num += 1
     avg_pressure = sum_arr / num
 
-    # print(avg_pressure)
+    print(avg_pressure)
 
     sleep_time, sleep_value = process_sleep_values(sleep_line)
 

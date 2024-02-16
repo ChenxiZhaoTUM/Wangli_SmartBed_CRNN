@@ -166,7 +166,7 @@ if __name__ == "__main__":
     if userExample.ser.is_open:
 
         # 气囊控制
-        index = 0  # 0:右侧 1左侧
+        index = 0  # 0右侧 1左侧
         action = 2  # 1充气 2停止 3放气
         cfgTime = 0XFF  # 1-20(S) 或0XFF(一直执行)
         mapByte = airMap()
@@ -176,15 +176,15 @@ if __name__ == "__main__":
         mapByte.bit.Tun = 1
         mapByte.bit.daTui = 1
         mapByte.bit.xiaoTui = 1
-        print(str(mapByte.char))
+        print("mapByte.char = ", str(mapByte.char))
         if mapByte.char == 0:  # 需要操作的位置需要置1，如果都为0即没有需要操作的位置，该参数无效
             print("请选择需要控制的气囊")
         else:
             cmdPacketData = DeviceUserProtocolHandle.airControlCmdPacketSend(index, action, mapByte.char, cfgTime)
             if not userExample.cmdPacketExec(cmdPacketData):
-                print("Cmd Error", "指令无应答")
+                print("Cmd Error: ", "指令无应答")
             else:
-                print("Cmd success")
+                print("Cmd Success")
         userExample.port_close()
 
         # 气压监测控制：
