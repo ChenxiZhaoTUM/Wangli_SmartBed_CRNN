@@ -2,12 +2,10 @@ import gymnasium as gym
 import numpy as np
 import torch
 from torch import nn
+from tianshou.policy import DQNPolicy
 from tianshou.data import Collector, VectorReplayBuffer
 from tianshou.env import SubprocVectorEnv
-from tianshou.policy import PPOPolicy
-from tianshou.trainer import onpolicy_trainer
-from tianshou.utils.net.common import ActorCritic, Net
-from tianshou.utils.net.discrete import Actor, Critic
+from tianshou.trainer import offpolicy_trainer
 from torch.distributions import Independent, Normal
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
@@ -17,6 +15,24 @@ from smart_bed_env import SmartBedEnv
 
 def make_env():
     return SmartBedEnv()
+
+
+class Net(nn.Module):
+    def __init__(self, state_shape, action_shape):
+        super().__init__()
+        self.model = nn.Sequential(
+            nn.Linear(np.prod(state_shape), 128), nn.ReLU(inplace=True),
+            nn.Linear(128, 128), nn.ReLU(inplace=True),
+            nn.Linear(128, 128), nn.ReLU(inplace=True),
+            nn.Linear(128, np.prod(action_shape)),
+        )
+
+    def forward(self, obs, state=None, info={}):
+        if not isinstance(obs, torch.Tensor):
+            obs = torch.tensor(obs, dtype=torch.float)
+        batch = obs.shape[0]
+        logits = self.model(obs.view(batch, -1))
+        return logits, state
 
 
 def train():
@@ -31,74 +47,29 @@ def train():
     observation_shape = envs.observation_space.shape or envs.observation_space.n
     action_shape = envs.action_space.shape or envs.action_space.n
 
-    net = Net(state_shape=observation_shape, hidden_sizes=[128, 128], activation=nn.Tanh, device=device)
-    actor = Actor(net, action_shape, device=device).to(device)
-    net_c = Net(state_shape=observation_shape, hidden_sizes=[128, 128], activation=nn.Tanh, device=device)
-    critic = Critic(net_c, device=device).to(device)
-    actor_critic = ActorCritic(actor, critic)
+    net = Net(observation_shape, action_shape)
+    optim = torch.optim.Adam(net.parameters(), lr=1e-3)
 
-    for m in actor_critic.modules():
-        if isinstance(m, torch.nn.Linear):
-            # orthogonal initialization
-            torch.nn.init.orthogonal_(m.weight, gain=np.sqrt(2))
-            torch.nn.init.zeros_(m.bias)
+    policy = DQNPolicy(net, optim, discount_factor=0.9, estimation_step=3, target_update_freq=320)
 
-    optim = torch.optim.Adam(set(actor.parameters()).union(critic.parameters()), lr=1e-3)
+    # lr_scheduler = LambdaLR(optim, lr_lambda=lambda epoch: 1 - epoch / 300)
 
-    # def dist(*logits):
-    #     return Independent(Normal(*logits), 1)
-
-    # def dist(logits):
-    #     mean, std = logits
-    #     std = torch.clamp(std, min=1e-6)
-    #     return Independent(Normal(mean, std), 1)
-    def dist(mean):
-        std = torch.ones_like(mean) * 0.5
-        return torch.distributions.Independent(torch.distributions.Normal(mean, std), 1)
-
-    lr_scheduler = LambdaLR(optim, lr_lambda=lambda epoch: 1 - epoch / 300)
-
-    policy = PPOPolicy(
-        actor,
-        critic,
-        optim,
-        dist,
-        discount_factor=0.99,
-        eps_clip=0.2,
-        dual_clip=None,
-        value_clip=True,
-        advantage_normalization=True,
-        recompute_advantage=False,
-        vf_coef=0.25,
-        ent_coef=0.0,
-        max_grad_norm=None,
-        gae_lambda=0.95,
-        reward_normalization=False,
-        max_batchsize=1024,
-        action_scaling=True,
-        action_bound_method='tanh',
-        action_space=envs.action_space,
-        lr_scheduler=lr_scheduler,
-        deterministic_eval=True
-    )
-
-    train_collector = Collector(policy, envs, VectorReplayBuffer(4000, num_envs))
-    test_collector = Collector(policy, test_envs)
+    train_collector = Collector(policy, envs, VectorReplayBuffer(4000, num_envs), exploration_noise=True)
+    test_collector = Collector(policy, test_envs, exploration_noise=True)
 
     log_path = "log"
     writer = SummaryWriter(log_path)
     logger = TensorboardLogger(writer)
 
-    result = onpolicy_trainer(policy, train_collector, test_collector,
-                              max_epoch=500, step_per_epoch=1000, episode_per_test=10, batch_size=64,
-                              repeat_per_collect=10, stop_fn=None, save_checkpoint_fn=None, logger=logger)
-
-    print(f"Finished training. Final reward: {result['best_reward']:.2f}")
-
-    envs.stop_threads()
-    envs.close_serial_port()
-    test_envs.stop_threads()
-    test_envs.close_serial_port()
+    result = offpolicy_trainer(
+        policy, train_collector, test_collector,
+        max_epoch=100, step_per_epoch=1000, step_per_collect=10,
+        update_per_step=0.1, episode_per_test=100, batch_size=64,
+        train_fn=lambda epoch, env_step: policy.set_eps(0.1),  # ?
+        test_fn=lambda epoch, env_step: policy.set_eps(0.05),  # ?
+        stop_fn=None,
+        logger=logger)
+    print(f'Finished training! Use {result["duration"]}')
 
 
 if __name__ == "__main__":
