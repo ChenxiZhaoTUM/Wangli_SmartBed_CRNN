@@ -26,7 +26,7 @@ class SmartBedEnv(gym.Env):
 
         self.action_space = spaces.MultiDiscrete([4] * 6)  # 0:no change, 1:inflation, 2:stop, 3:deflation
         low_obs = np.full(16, 0).astype(np.float32)
-        high_obs = np.full(16, 1).astype(np.float32)
+        high_obs = np.full(16, 4096).astype(np.float32)  # lack of normalization
         self.observation_space = spaces.Box(low_obs, high_obs)
         self.obs = np.zeros(16)
         self.previous_pressure_values = np.zeros(16)
@@ -205,6 +205,8 @@ class SmartBedEnv(gym.Env):
 
         # action: 0:no change, 1:inflation, 2:stop, 3:deflation
         # take action of 6 airbags
+
+        self.send_airbag_control_command(action)
 
         pressure_values = self.read_pressure_data()
         if pressure_values is None:
