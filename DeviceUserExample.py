@@ -185,6 +185,8 @@ if __name__ == "__main__":
                 print("Cmd Error: ", "指令无应答")
             else:
                 print("Cmd Success")
+
+        time.sleep(20)
         userExample.port_close()
 
         # 气压监测控制：
