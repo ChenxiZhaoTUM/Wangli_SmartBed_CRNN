@@ -1,160 +1,109 @@
 import os
 import re
-from datetime import datetime
 import numpy as np
-import torch
 
 
-def parse_time_string(time_string):
-    return datetime.strptime(time_string, "%H:%M:%S.%f")
+def save_data_to_txt(file_path, data, suffix):
+    save_file_path = file_path.replace(suffix, f"_Conver{suffix.capitalize()}")
+    with open(save_file_path, "w") as file:
+        for time, values in data.items():
+            values_str = ", ".join(map(str, values))
+            file.write(f"{time}: {values_str}\n")
+    print(f"Data saved to {save_file_path}")
 
 
-def format_time_string(time):
-    return time.strftime("%H:%M:%S")
+def process_file(file_path, is_origin):
+    all_data = {}
+    suffix = "_origin.txt" if is_origin else "_process.txt"
 
+    with open(file_path, 'r', errors='ignore') as file:
+        lines = file.readlines()
 
-def format_time_string_half_second(time):
-    return time.strftime("%H:%M:%S.%f")
+        if is_origin:
+            time_arr_txt = []
+            value_arr_txt = []
 
+            for line in lines:
+                line = line.strip()
 
-def round_to_nearest_half_second_down(time_obj):
-    if time_obj.microsecond >= 500000:
-        time_obj = time_obj.replace(microsecond=500000)
-    else:
-        time_obj = time_obj.replace(microsecond=0)
+                # ignore the line not including []
+                if "[" not in line and "]" not in line:
+                    continue
 
-    return time_obj
+                time_start = line.find("[")
+                time_end = line.find("]")
 
+                if line[time_end + 1: time_end + 5] == "AA23" and line[-2:] == "55":
+                    pres_hex_values = line[time_end + 5: -2]
+                    if len(pres_hex_values) == 64:
+                        processed_hex_values = ''.join(
+                            [pres_hex_values[i + 2: i + 4] + pres_hex_values[i: i + 2] for i in
+                             range(0, len(pres_hex_values), 4)])
 
-def average_by_sec(required_time, time_arr, value_arr):
-    time_objs = [parse_time_string(time_str) for time_str in time_arr]
+                        pres_decimal_arr = [4095 - int(processed_hex_values[i:i + 4], 16) for i in
+                                            range(0, len(processed_hex_values), 4)]
+                    else:
+                        # print("Pressure values are less than 16.")
+                        continue
+                else:
+                    # print("Header/length/tail identification error.")
+                    continue
 
-    if required_time == 1:
-        time_objs = [format_time_string(time_obj) for time_obj in time_objs]
-    else:
-        time_objs = [round_to_nearest_half_second_down(time_obj) for time_obj in time_objs]
-        time_objs = [format_time_string_half_second(time_obj) for time_obj in time_objs]
+                time_str = line[time_start + 1: time_end]
+                time_str = re.sub(r'[^a-zA-Z0-9:.]', '', time_str)
+                time_arr_txt.append(time_str)
+                value_arr_txt.append(pres_decimal_arr)
 
-    # create dictionary to save time and corresponding values
-    sum_dict = {}
-    count_dict = {}
-    new_time_arr = []
+            time_arr_txt = np.array(time_arr_txt)
+            value_arr_txt = np.array(value_arr_txt)
 
-    for i in range(len(time_objs)):
-        new_time_str = time_objs[i]
+            for i in range(len(time_arr_txt)):
+                time = time_arr_txt[i]
+                all_data[time] = value_arr_txt[i]
 
-        if new_time_str in sum_dict:
-            sum_dict[new_time_str] += value_arr[i]
-            count_dict[new_time_str] += 1
         else:
-            sum_dict[new_time_str] = value_arr[i]
-            count_dict[new_time_str] = 1
-            new_time_arr.append(new_time_str)
+            times_process = []
+            values_process = []
 
-    avg_value_arr = [sum_dict[new_time_str] / count_dict[new_time_str] for new_time_str in new_time_arr]
-    avg_value_arr = np.array(avg_value_arr)
+            for line in lines:
+                parts = line.strip().split('][')
+                if len(parts) == 3:
+                    time_str = parts[0][1:]
+                    airbag_str = parts[1]
+                    pressuremat_str = parts[2][:-1]
 
-    new_time_arr = np.array(new_time_arr)
+                    airbag_values = [float(value.strip()) for value in airbag_str.split(',')]
+                    pressuremat_values = [(4095 - int(value.strip())) for value in pressuremat_str.split(',')]
 
-    return new_time_arr, avg_value_arr
+                    times_process.append(time_str)
+                    values_process.append(pressuremat_values)
+
+            times_process = np.array(times_process)
+            values_process = np.array(values_process)
+
+            for i in range(len(times_process)):
+                time = times_process[i]
+                all_data[time] = values_process[i]
+
+    save_data_to_txt(file_path, all_data, suffix)
 
 
-def read_pressure():
-    folder_path = "./lowPres_check"
+def read_pressure(folder_path):
     file_names = os.listdir(folder_path)
-
-    all_process_data = {}
-    all_origin_data = {}
-
     print("The operating files:")
 
     for file_name in file_names:
         file_path = os.path.join(folder_path, file_name)
-        print(file_path)
 
-        with open(file_path, 'r', errors='ignore') as file:
-            lines = file.readlines()
+        if file_name.endswith("_origin.txt"):
+            print(file_path)
+            process_file(file_path, is_origin=True)
 
-            if file_name.endswith("_process.txt"):
-                times_process = []
-                values_process = []
-
-                for line in lines:
-                    parts = line.strip().split('][')
-                    if len(parts) == 3:
-                        time_str = parts[0][1:]
-                        airbag_str = parts[1]
-                        pressuremat_str = parts[2][:-1]
-
-                        airbag_values = [float(value.strip()) for value in airbag_str.split(',')]
-                        pressuremat_values = [(4095 - int(value.strip())) for value in pressuremat_str.split(',')]
-
-                        times_process.append(time_str)
-                        values_process.append(pressuremat_values)
-
-                times_process = np.array(times_process)
-                values_process = np.array(values_process)
-
-                avg_times_process, avg_values_process = average_by_sec(0.5, times_process, values_process)
-
-                for i in range(len(avg_times_process)):
-                    time = avg_times_process[i]
-                    all_process_data[time] = avg_values_process[i]
-
-            if file_name.endswith("_origin.txt"):
-                time_arr_txt = []
-                value_arr_txt = []
-
-                for line in lines:
-                    line = line.strip()
-
-                    # ignore the line not including []
-                    if "[" not in line and "]" not in line:
-                        continue
-
-                    time_start = line.find("[")
-                    time_end = line.find("]")
-
-                    if line[time_end + 1: time_end + 5] == "AA23" and line[-2:] == "55":
-                        pres_hex_values = line[time_end + 5: -2]
-                        if len(pres_hex_values) == 64:
-                            processed_hex_values = ''.join(
-                                [pres_hex_values[i + 2: i + 4] + pres_hex_values[i: i + 2] for i in
-                                 range(0, len(pres_hex_values), 4)])
-
-                            pres_decimal_arr = [4095 - int(processed_hex_values[i:i + 4], 16) for i in
-                                                range(0, len(processed_hex_values), 4)]
-                        else:
-                            # print("Pressure values are less than 16.")
-                            continue
-                    else:
-                        # print("Header/length/tail identification error.")
-                        continue
-
-                    time_str = line[time_start + 1: time_end]
-                    time_str = re.sub(r'[^a-zA-Z0-9:.]', '', time_str)
-                    time_arr_txt.append(time_str)
-                    value_arr_txt.append(pres_decimal_arr)
-
-                time_arr_txt = np.array(time_arr_txt)
-                value_arr_txt = np.array(value_arr_txt)
-
-                avg_time_arr_txt, avg_value_arr_txt = average_by_sec(0.5, time_arr_txt, value_arr_txt)
-
-                for i in range(len(avg_time_arr_txt)):
-                    time = avg_time_arr_txt[i]
-                    all_origin_data[time] = avg_value_arr_txt[i]
-
-    return all_origin_data, all_process_data
+        elif file_name.endswith("_process.txt"):
+            print(file_path)
+            process_file(file_path, is_origin=False)
 
 
 if __name__ == '__main__':
-    all_origin_data, all_process_data = read_pressure()
-
-    common_data_in_single_file = {}
-    for time, origin_data in all_origin_data.items():
-        if time in all_process_data:
-            print(f"Time: {time}")
-            print(f"Original Data: {all_origin_data[time]}")
-            print(f"Processed Data: {all_process_data[time]}")
-            print("--------------------------------------------------")
+    folder_path = "./lowPres_check"
+    read_pressure(folder_path)
