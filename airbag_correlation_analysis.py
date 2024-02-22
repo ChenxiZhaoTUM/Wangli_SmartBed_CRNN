@@ -105,7 +105,7 @@ def dynamic_pic():
     ax1.set_ylabel("Pressure Value")
 
     mat_image = np.reshape(mat_values[0], (32, 64))
-    im2 = ax2.imshow(mat_image, cmap='jet', interpolation='bilinear', vmin=-0, vmax=1000)
+    im2 = ax2.imshow(mat_image, cmap='jet', interpolation='bilinear', vmin=-0, vmax=2000)
     ax2.axis('off')
     ax2.set_title("Pressure Mat Values")
     fig.colorbar(im2, ax=ax2)
