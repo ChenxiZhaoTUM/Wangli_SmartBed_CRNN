@@ -3,6 +3,9 @@ import re
 from datetime import datetime
 import numpy as np
 import torch
+import scipy.stats
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 
 def parse_time_string(time_string):
@@ -148,13 +151,73 @@ def read_pressure():
     return all_origin_data, all_process_data
 
 
-if __name__ == '__main__':
+def reshape_pressuremat_values(pressuremat_values):
+    new_values = np.zeros((32, 64))
+    for i in range(16):
+        new_values[:, i * 4:(i + 1) * 4] = pressuremat_values[i]
+
+    return new_values
+
+
+def dynamic_pic():
     all_origin_data, all_process_data = read_pressure()
 
     common_data_in_single_file = {}
     for time, origin_data in all_origin_data.items():
         if time in all_process_data:
-            print(f"Time: {time}")
-            print(f"Original Data: {all_origin_data[time]}")
-            print(f"Processed Data: {all_process_data[time]}")
-            print("--------------------------------------------------")
+            process_data = all_process_data[time]
+
+            common_data_id = len(common_data_in_single_file)
+            common_data_in_single_file[common_data_id] = {
+                'time': time,
+                'origin_data': origin_data,
+                'process_data': process_data
+            }
+
+    origin_values = np.zeros((len(common_data_in_single_file), 32, 64))
+    process_values = np.zeros((len(common_data_in_single_file), 32, 64))
+
+    for idx, data in common_data_in_single_file.items():
+        origin_values[idx, :, :] = reshape_pressuremat_values(data['origin_data'])
+        process_values[idx, :, :] = reshape_pressuremat_values(data['process_data'])
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
+
+    ax1.set_aspect('equal', 'box')
+    origin_image = np.reshape(origin_values[0], (32, 64))
+    im1 = ax1.imshow(origin_image, cmap='jet', interpolation='bilinear', vmin=-0, vmax=3000)
+    ax1.axis('off')
+    ax1.set_title("Original Values")
+    fig.colorbar(im1, ax=ax1)
+
+    ax2.set_aspect('equal', 'box')
+    process_image = np.reshape(process_values[0], (32, 64))
+    im2 = ax2.imshow(process_image, cmap='jet', interpolation='bilinear', vmin=-0, vmax=3000)
+    ax2.axis('off')
+    ax2.set_title("Pressed Values")
+    fig.colorbar(im2, ax=ax2)
+
+    def update(frame):
+        target_frame = np.reshape(origin_values[frame], (32, 64))
+        im1.set_array(target_frame)
+        input_frame = np.reshape(process_values[frame], (32, 64))
+        im2.set_array(input_frame)
+
+    ani = animation.FuncAnimation(fig, update, frames=len(process_values), interval=100, blit=False)
+
+    plt.tight_layout()
+    plt.show()
+
+
+if __name__ == '__main__':
+    # all_origin_data, all_process_data = read_pressure()
+    #
+    # common_data_in_single_file = {}
+    # for time, origin_data in all_origin_data.items():
+    #     if time in all_process_data:
+    #         print(f"Time: {time}")
+    #         print(f"Original Data: {all_origin_data[time]}")
+    #         print(f"Processed Data: {all_process_data[time]}")
+    #         print("--------------------------------------------------")
+
+    dynamic_pic()

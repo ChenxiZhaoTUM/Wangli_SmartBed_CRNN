@@ -265,17 +265,17 @@ def dynamic_pic(inputs_pressure, target_arr):
 
     ax1.set_aspect('equal', 'box')
     output_image = np.reshape(target_arr[0], (32, 64))
-    im1 = ax1.imshow(output_image, cmap='jet', interpolation='bilinear')
+    im1 = ax1.imshow(output_image, cmap='jet', interpolation='bilinear', vmin=-0, vmax=40)
     ax1.axis('off')
     cbar1 = fig.colorbar(im1, ax=ax1)
 
     ax2.set_aspect('equal', 'box')
     input_image = np.reshape(inputs_pressure[0], (32, 64))
-    im2 = ax2.imshow(input_image, cmap='jet', interpolation='bilinear')
+    im2 = ax2.imshow(input_image, cmap='jet', interpolation='bilinear', vmin=-0, vmax=3000)
     ax2.axis('off')
     cbar2 = fig.colorbar(im2, ax=ax2)
 
-    ani = animation.FuncAnimation(fig, update, frames=len(target_arr), interval=500, blit=False)
+    ani = animation.FuncAnimation(fig, update, frames=len(target_arr), interval=100, blit=False)
 
     plt.tight_layout()
     plt.show()
