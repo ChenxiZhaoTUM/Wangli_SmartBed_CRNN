@@ -167,7 +167,7 @@ if __name__ == "__main__":
 
         # 气囊控制
         index = 0  # 0右侧 1左侧
-        action = 2  # 1充气 2停止 3放气
+        action = 1  # 1充气 2停止 3放气
         cfgTime = 0XFF  # 1-20(S) 或0XFF(一直执行)
         mapByte = airMap()
         mapByte.bit.Jian = 1
@@ -186,7 +186,6 @@ if __name__ == "__main__":
             else:
                 print("Cmd Success")
 
-        time.sleep(20)
         userExample.port_close()
 
         # 气压监测控制：
