@@ -30,7 +30,7 @@ def round_to_nearest_half_second_down(time_obj):
 def average_by_sec(required_time, time_arr, value_arr):
     time_objs = [parse_time_string(time_str) for time_str in time_arr]
 
-    if (required_time == 1):
+    if required_time == 1:
         time_objs = [format_time_string(time_obj) for time_obj in time_objs]
     else:
         time_objs = [round_to_nearest_half_second_down(time_obj) for time_obj in time_objs]
