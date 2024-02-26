@@ -81,7 +81,6 @@ def reshape_pressuremat_values(pressuremat_values):
 
     return new_values
 
-
 def dynamic_pic():
     data_dic = read_pressure()
 
@@ -96,8 +95,9 @@ def dynamic_pic():
     plt.subplots_adjust(left=0.2, right=0.8, top=0.95, bottom=0.05)
 
     x = np.arange(1, 7)
-    line, = ax1.plot([], [], '-o')
-    ax1.set_xlim(0, 8)
+    line, = ax1.plot([], [], '-o', label='Airbag Pressure')
+    ax1.set_xlim(-2, 8)
+    ax1.set_xticks(np.arange(1, 7))
     ax1.set_ylim(np.min(airbag_values), np.max(airbag_values))
     ax1.legend()
     ax1.set_title("Airbag Pressure Values")
@@ -117,7 +117,6 @@ def dynamic_pic():
         im2.set_array(mat_values[frame])
 
     ani = animation.FuncAnimation(fig, update, frames=len(mat_values), interval=100, blit=False)
-
     plt.tight_layout()
     plt.show()
 

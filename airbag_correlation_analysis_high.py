@@ -219,7 +219,8 @@ def dynamic_pic(airbag_values, mat_values):
 
     x = np.arange(1, 7)
     line, = ax1.plot([], [], '-o')
-    ax1.set_xlim(0, 9)
+    ax1.set_xlim(-2, 10)
+    ax1.set_xticks(np.arange(1, 7))
     ax1.set_ylim(np.min(airbag_values), np.max(airbag_values))
     ax1.legend()
     ax1.set_title("Airbag Pressure Values")
