@@ -116,6 +116,9 @@ class SmartBedEnv(gym.Env):
             print("index[%d]: %.2f" % (i, data[i]))
 
     def send_airbag_control_command(self, action):
+        if not isinstance(action, (list, np.ndarray)):
+            action = [action]
+
         index = 0
         cfgTime = 0XFF  # 1-20(S) or 0XFF(always run)
         mapByte = deviceUser.airMap()
