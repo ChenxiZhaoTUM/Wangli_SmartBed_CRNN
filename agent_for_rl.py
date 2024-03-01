@@ -11,6 +11,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
 from tianshou.utils import TensorboardLogger
 from smart_bed_env import SmartBedEnv
+from smart_bed_env_test import SmartBedEnvTest
 
 
 def make_env():
@@ -37,7 +38,7 @@ class Net(nn.Module):
 
 def train():
     envs = gym.make('SmartBedEnv-v0')
-    test_envs = gym.make('SmartBedEnv-v0')
+    test_envs = gym.make('SmartBedEnvTest-v0')
 
     num_envs = 1
     # envs = SubprocVectorEnv([make_env for _ in range(num_envs)])
@@ -65,8 +66,8 @@ def train():
         policy, train_collector, test_collector,
         max_epoch=100, step_per_epoch=1000, step_per_collect=10,
         update_per_step=0.1, episode_per_test=100, batch_size=64,
-        train_fn=lambda epoch, env_step: policy.set_eps(0.1),  # ?
-        test_fn=lambda epoch, env_step: policy.set_eps(0.05),  # ?
+        train_fn=lambda epoch, env_step: policy.set_eps(0.1),
+        test_fn=lambda epoch, env_step: policy.set_eps(0.05),
         stop_fn=None,
         logger=logger)
     print(f'Finished training! Use {result["duration"]}')

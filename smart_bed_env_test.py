@@ -15,7 +15,7 @@ cmdAckEvent = Event()
 uartPacektFifo = deviceUser.ProtocolDatasFIFO()
 
 
-class SmartBedEnv(gym.Env):
+class SmartBedEnvTest(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 30}
 
     def __init__(self, render_mode=None, port='COM3', baudrate=115200):
@@ -248,6 +248,6 @@ class SmartBedEnv(gym.Env):
 
 
 register(
-    id='SmartBedEnv-v0',
-    entry_point='smart_bed_env:SmartBedEnv',
+    id='SmartBedEnvTest-v0',
+    entry_point='smart_bed_env_test:SmartBedEnvTest',
 )
