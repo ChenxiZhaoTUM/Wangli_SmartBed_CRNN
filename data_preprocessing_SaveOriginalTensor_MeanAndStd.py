@@ -259,7 +259,7 @@ def save_inputs_and_targets(isTest=False):
     if isTest:
         dataDir = "./dataset/for_test/"
     else:
-        dataDir = "./dataset/for_train"
+        dataDir = "./dataset/for_train/"
     csv_files_path = [os.path.join(dataDir, file) for file in os.listdir(dataDir) if file.endswith('.CSV')]
 
     for file_path in csv_files_path:

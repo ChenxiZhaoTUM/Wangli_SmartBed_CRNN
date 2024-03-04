@@ -258,7 +258,7 @@ def dynamic_pic(inputs_pressure, target_arr):
     def update(frame):
         target_frame = np.reshape(target_arr[frame], (32, 64))
         im1.set_array(target_frame)
-        input_frame = np.reshape(inputs_pressure[frame], (32, 64))
+        input_frame = np.reshape(inputs_pressure[frame], (64, 128))
         im2.set_array(input_frame)
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
@@ -270,7 +270,7 @@ def dynamic_pic(inputs_pressure, target_arr):
     cbar1 = fig.colorbar(im1, ax=ax1)
 
     ax2.set_aspect('equal', 'box')
-    input_image = np.reshape(inputs_pressure[0], (32, 64))
+    input_image = np.reshape(inputs_pressure[0], (64, 128))
     im2 = ax2.imshow(input_image, cmap='jet', interpolation='bilinear', vmin=-0, vmax=3000)
     ax2.axis('off')
     cbar2 = fig.colorbar(im2, ax=ax2)
@@ -296,9 +296,9 @@ if __name__ == "__main__":
             inputs.append(input_data)
             targets.append(target_data)
 
-            input_pressure = np.zeros((32, 64))
-            for i in range(16):
-                input_pressure[:, i * 4: (i + 1) * 4] = input_data[i]
+            input_pressure = np.zeros((64, 128))
+            for i in range(15):
+                input_pressure[:, i * 7: (i + 1) * 7] = input_data[i + 1]
                 # print(input_pressure)
 
             inputs_pressure.append(input_pressure)

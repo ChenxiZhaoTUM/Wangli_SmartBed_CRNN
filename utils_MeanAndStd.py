@@ -2,9 +2,25 @@ import math, os
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+import torch.nn as nn
+import torch.optim as optim
 
-#NOTE: the range of the lambda output should be [0,1]                   
-def get_cosine_lambda(initial_lr,final_lr,epochs,warmup_epoch):
+
+class CustomLoss(nn.Module):
+    def __init__(self, beta=1.0):
+        super(CustomLoss, self).__init__()
+        self.mse_loss = nn.MSELoss()
+        self.beta = beta
+
+    def forward(self, y_pred, y_true):
+        mse_loss = self.mse_loss(y_pred, y_true)
+        negative_penalty = torch.mean(torch.clamp(-y_pred, min=0) ** 2)
+        total_loss = mse_loss + self.beta * negative_penalty
+        return total_loss
+
+
+# NOTE: the range of the lambda output should be [0,1]
+def get_cosine_lambda(initial_lr, final_lr, epochs, warmup_epoch):
     """
     Returns a lambda function that calculates the learning rate based on the cosine schedule.
 
@@ -17,12 +33,16 @@ def get_cosine_lambda(initial_lr,final_lr,epochs,warmup_epoch):
     Returns:
         function: The lambda function that calculates the learning rate.
     """
+
     def cosine_lambda(idx_epoch):
         if idx_epoch < warmup_epoch:
             return idx_epoch / warmup_epoch
         else:
-            return 1-(1-(math.cos((idx_epoch-warmup_epoch)/(epochs-warmup_epoch)*math.pi)+1)/2)*(1-final_lr/initial_lr)
+            return 1 - (1 - (math.cos((idx_epoch - warmup_epoch) / (epochs - warmup_epoch) * math.pi) + 1) / 2) * (
+                    1 - final_lr / initial_lr)
+
     return cosine_lambda
+
 
 # compute learning rate with decay in second half
 def computeLR(i, epochs, minLR, maxLR):
@@ -44,8 +64,8 @@ def makeDirs(directoryList):
 
 
 def imageOut(filename, _input, _target, _output, max_val=40, min_val=0):
-    input_mean = torch.load('dataset/saved_tensor_for_train/input_mean.pt')
-    input_std = torch.load('dataset/saved_tensor_for_train/input_std.pt')
+    input_mean = torch.load('D:\Wangli_SmartBed_CRNN\dataset\saved_tensor_for_train\input_mean.pt')
+    input_std = torch.load('D:\Wangli_SmartBed_CRNN\dataset\saved_tensor_for_train\input_std.pt')
 
     target = np.copy(_target)
     output = np.copy(_output)
@@ -53,9 +73,13 @@ def imageOut(filename, _input, _target, _output, max_val=40, min_val=0):
 
     last_channel = _input[-1, -1, :, :]
     last_channel = last_channel * input_std[-1] + input_mean[-1]
-    last_channel = np.delete(last_channel, [4 * i + 3 for i in range(16)], axis=1)
-    last_channel = np.concatenate((last_channel, np.zeros((32, 16))), axis=1)
-    last_channel_image = np.reshape(last_channel, (32, 64))
+    expanded_input = np.repeat(np.repeat(last_channel, 2, axis=0), 2, axis=1)  # [64, 128]
+    expanded_input = np.delete(expanded_input, [8 * i + 7 for i in range(16)], axis=1)
+    expanded_input = np.concatenate((expanded_input, np.zeros((64, 16))), axis=1)
+    last_channel_image = np.zeros((64, 128))
+    for i in range(15):
+        last_channel_image[:, 7 * i: 7 * (i + 1)] = expanded_input[:, 7 * (i + 1): 7 * (i + 2)]
+
     ax1.set_aspect('equal', 'box')
     im1 = ax1.imshow(last_channel_image, cmap='jet', vmin=0, vmax=2500)
     ax1.axis('off')

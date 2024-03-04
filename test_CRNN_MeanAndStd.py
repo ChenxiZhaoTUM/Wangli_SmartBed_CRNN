@@ -5,19 +5,19 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from model_CRNN import CRNN
 from SmartBedDataset_ReadOriginalTensor_MeanAndStd import SmartBedDataset_Base, SmartBedDataset_Test
-import utils
+import utils_MeanAndStd as utils
 
 use_cuda = torch.cuda.is_available()  # check if GPU exists
 device = torch.device("cuda" if use_cuda else "cpu")  # use CPU or GPU
 
-prefix = "CRNN_expo4_mean_01_model"
+prefix = "CRNN_expo4_mean_04_03_2000model_2"
 if len(sys.argv) > 1:
     prefix = sys.argv[1]
     print("Output prefix: {}".format(prefix))
 
 suffix = ""
 lf = "./" + prefix + "_testout{}.txt".format(suffix)
-output_dir = "TEST_CRNN_expo4_mean_01"
+output_dir = "TEST_CRNN_expo4_mean_04_03_2000model_2"
 os.makedirs(output_dir, exist_ok=True)
 
 ##### basic settings #####
@@ -45,7 +45,7 @@ print("Test batches: {}".format(len(testLoader)))
 netG = CRNN(channelExponent=expo, dropout=dropout)
 print(netG)
 
-doLoad = "./CRNN_expo4_mean_01_10000model"
+doLoad = "./CRNN_expo4_mean_04_03_2000model"
 if len(doLoad) > 0:
     netG.load_state_dict(torch.load(doLoad, map_location=torch.device('cpu')))
     print("Loaded model " + doLoad)
@@ -78,20 +78,20 @@ with torch.no_grad():
         utils.log(lf, "    pressure:  abs. difference, ratio: %f , %f " % (
             np.sum(np.abs(outputs_cpu - targets_cpu)), lossPer_p.item()))
 
-        utils.log(lf, "    Outputs Summary(min, max and mean of output): %f , %f, %f " % (
-            np.min(outputs_cpu), np.max(outputs_cpu), np.mean(outputs_cpu)))
-        utils.log(lf, "    Targets Summary(min, max and mean of target): %f , %f, %f " % (
-            np.min(targets_cpu), np.max(targets_cpu), np.mean(targets_cpu)))
-
         targets_denormalized = raw_dataset.denormalize(targets_cpu)
         outputs_denormalized = raw_dataset.denormalize(outputs_cpu)
+
+        utils.log(lf, "    Outputs Summary(min, max and mean of output): %f, %f, %f " %
+                  (np.min(outputs_denormalized), np.max(outputs_denormalized), np.mean(outputs_denormalized)))
+        utils.log(lf, "    Targets Summary(min, max and mean of target): %f, %f, %f " %
+                  (np.min(targets_denormalized), np.max(targets_denormalized), np.mean(targets_denormalized)))
 
         targets_dn = torch.from_numpy(targets_denormalized)
         outputs_dn = torch.from_numpy(outputs_denormalized)
         MSELossTest_dn = criterionMSELoss(outputs_dn, targets_dn)
         MSELossTest_dn_accum += MSELossTest_dn.item()
 
-        os.chdir("./TEST_CRNN_expo4_mean_01/")
+        os.chdir("./TEST_CRNN_expo4_mean_04_03_2000model_2/")
         utils.imageOut("%04d" % i, inputs_cpu[0], targets_denormalized[0], outputs_denormalized[0])
         os.chdir("../")
 
