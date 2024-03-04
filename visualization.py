@@ -170,14 +170,14 @@ if __name__ == "__main__":
     # LossDisplay("./CRNN_expo4_50files_01_MSELoss.txt", "./CRNN_expo4_50files_01_MSELossVal.txt", filter_threshold=0.001)
     # LossDisplay("./CRNN_expo4_02_MSELoss.txt", "./CRNN_expo4_02_MSELossVal.txt", filter_threshold=0.001)
 
-    # LossDisplay("./UNet3D_04_MSELoss.txt", "./UNet3D_04_MSELossVal.txt", filter_threshold=0.006)
+    LossDisplay("./results//CRNN_expo4_mean_04_03_MSELoss.txt", "./results/CRNN_expo4_mean_04_03_MSELossVal.txt", filter_threshold=0.2)
 
-    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(14, 12))
-    axes = LossDisplayTogether("./CRNN_expo4_25files_01_MSELoss.txt", "./CRNN_expo4_25files_01_MSELossVal.txt",
-                               filter_threshold=0.001, label='25 files', axes=axes)
-    axes = LossDisplayTogether("./CRNN_expo4_50files_01_MSELoss.txt", "./CRNN_expo4_50files_01_MSELossVal.txt",
-                               filter_threshold=0.001, label='50 files', axes=axes)
-    axes = LossDisplayTogether("./CRNN_expo4_02_MSELoss.txt", "./CRNN_expo4_02_MSELossVal.txt", filter_threshold=0.001,
-                               label='75 files', axes=axes)
+    # fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(14, 12))
+    # axes = LossDisplayTogether("./CRNN_expo4_25files_01_MSELoss.txt", "./CRNN_expo4_25files_01_MSELossVal.txt",
+    #                            filter_threshold=0.001, label='25 files', axes=axes)
+    # axes = LossDisplayTogether("./CRNN_expo4_50files_01_MSELoss.txt", "./CRNN_expo4_50files_01_MSELossVal.txt",
+    #                            filter_threshold=0.001, label='50 files', axes=axes)
+    # axes = LossDisplayTogether("./CRNN_expo4_02_MSELoss.txt", "./CRNN_expo4_02_MSELossVal.txt", filter_threshold=0.001,
+    #                            label='75 files', axes=axes)
     plt.tight_layout()
     plt.show()
