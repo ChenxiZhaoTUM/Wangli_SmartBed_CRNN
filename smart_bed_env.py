@@ -36,6 +36,7 @@ class SmartBedEnv(gym.Env):
         self.running = True
         self.cmdLock = Lock()
         self.get_uart_ports()
+
         self.ser = serial.Serial()
         self.ser.port = port
         self.ser.baudrate = baudrate

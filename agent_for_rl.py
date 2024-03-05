@@ -14,10 +14,6 @@ from smart_bed_env import SmartBedEnv
 from smart_bed_env_test import SmartBedEnvTest
 
 
-def make_env():
-    return SmartBedEnv()
-
-
 class Net(nn.Module):
     def __init__(self, state_shape, action_shape):
         super().__init__()
@@ -49,6 +45,7 @@ def train():
     action_shape = envs.action_space.shape or envs.action_space.n
 
     net = Net(observation_shape, action_shape)
+    net.to(device)
     optim = torch.optim.Adam(net.parameters(), lr=1e-3)
 
     policy = DQNPolicy(net, optim, discount_factor=0.9, estimation_step=3, target_update_freq=320)
