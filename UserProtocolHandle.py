@@ -68,7 +68,6 @@ def collect_raw_packet(rawdata, p_Packet):
     # 检查协议包CRC
 
     # 从FIFO中读取协议包字段
-    # 从FIFO中读取协议包字段
     if start_byte == 0XAA:
         for i in range(35):
             p_Packet.append(rawdata.pop(0))

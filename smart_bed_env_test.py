@@ -4,21 +4,27 @@ from gymnasium.envs.registration import register
 import numpy as np
 import serial
 import serial.tools.list_ports
+import UserProtocolHandle as matUser
+from single_line_data_for_real_time import process_pressure_values
 import DeviceUserProtocolHandle as deviceUser
+from DeviceUserExample import packetHandleThread
 import time
 from queue import Queue
 from threading import Thread, Lock, Event
-from DeviceUserExample import packetHandleThread
+from datetime import datetime
 
 uartFifo = Queue(200)
 cmdAckEvent = Event()
-uartPacektFifo = deviceUser.ProtocolDatasFIFO()
+uartPacketFifo = deviceUser.ProtocolDatasFIFO()
+matFifo = matUser.ProtocolDatasFIFO()
+pressDataList = []
 
 
 class SmartBedEnvTest(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 30}
 
-    def __init__(self, render_mode=None, port='COM3', baudrate=115200):
+    def __init__(self, render_mode=None, control_port='COM3', control_baudrate=115200,
+                 pressure_port='COM4', pressure_baudrate=115200):
         self.alpha = 0.1
         self.episode = 1
         self.output_episode = 100
@@ -31,17 +37,30 @@ class SmartBedEnvTest(gym.Env):
         self.obs = np.zeros(16)
         self.previous_pressure_values = np.zeros(16)
         self.previous_action = np.zeros(6)  # here need to change to the previous inner pressure of the airbag
+        self.pressDataList = []
 
         # Serial port initialization for communication with the smart bed hardware
         self.running = True
+        self.obsLock = Lock()
         self.cmdLock = Lock()
         self.get_uart_ports()
-        self.ser = serial.Serial()
-        self.ser.port = port
-        self.ser.baudrate = baudrate
-        self.ser.inter_byte_timeout = 0.01
-        self.ser.timeout = 2
-        self.open_serial_port()
+
+        self.pressure_ser = serial.Serial()
+        self.pressure_ser.port = pressure_port
+        self.pressure_ser.baudrate = pressure_baudrate
+        self.pressure_ser.inter_byte_timeout = 0.01
+        self.pressure_ser.timeout = 2
+        self.open_serial_port(self.pressure_ser, "pressure")
+
+        self.matThread = Thread(target=self.mat_task)
+        self.matThread.start()
+
+        self.control_ser = serial.Serial()
+        self.control_ser.port = control_port
+        self.control_ser.baudrate = control_baudrate
+        self.control_ser.inter_byte_timeout = 0.01
+        self.control_ser.timeout = 2
+        self.open_serial_port(self.control_ser, "control")
 
         self.uartReceiveThread = Thread(target=self.uart_receive_task)
         self.uartReceiveThread.start()
@@ -57,41 +76,81 @@ class SmartBedEnvTest(gym.Env):
         for port in ports:
             print(port.description)
 
-    def open_serial_port(self):
+    def open_serial_port(self, ser, port_type):
         try:
-            self.ser.open()
-            print("Serial port opened successfully.")
+            ser.open()
+            print(f"{port_type.capitalize()} serial port opened successfully.")
         except Exception as e:
-            print(f"Error opening serial port: {e}")
+            print(f"Error opening {port_type} serial port: {e}")
 
-    def close_serial_port(self):
+    def close_serial_port(self, ser, port_type):
         try:
-            self.ser.close()
-            print("Serial port closed successfully.")
+            ser.close()
+            print(f"{port_type.capitalize()} serial port closed successfully.")
         except Exception as e:
-            print(f"Error closing serial port: {e}")
+            print(f"Error closing {port_type} serial port: {e}")
+
+    def stop_threads(self):
+        self.running = False
+        self.uartReceiveThread.join()
+        self.packetParaseThread.join()
+
+    def mat_task(self):
+        while self.running:
+            # here delete while True
+            if self.pressure_ser.is_open:
+                try:
+                    data = self.pressure_ser.read(1000)
+                    if len(data):
+                        # t = time.time()
+                        # print("uartReceiveTask rec data", int(round(t * 1000)), data)
+                        packet = bytearray()
+                        cData = bytearray(data)
+                        timestamp = datetime.now().strftime("[%H:%M:%S.%f]")[:-4] + "]"
+                        while len(cData):
+                            packet.clear()
+                            matUser.collect_raw_packet(cData, packet)
+                            curData = timestamp + packet.hex().upper()
+                            if len(packet) == 35:
+                                self.pressDataList.append(curData)
+                            elif len(packet) == 17:
+                                sum_arr = np.zeros(16)
+                                for pressure_line in self.pressDataList:
+                                    pressure_time, pressure_value = process_pressure_values(pressure_line)
+                                    sum_arr += pressure_value
+
+                                if self.pressDataList is not None:
+                                    with self.obsLock:
+                                        self.obs = sum_arr / len(self.pressDataList)
+                                self.pressDataList = []
+                except Exception as e:
+                    print(f"Error reading pressure data: {e}")
+
+        else:
+            time.sleep(0.2)
+            print("Cannot open mat port!")
 
     def uart_receive_task(self):
         while self.running:
-            if self.ser.is_open:
+            if self.control_ser.is_open:
                 try:
-                    data = self.ser.read(10000)
+                    data = self.control_ser.read(10000)
                 except:
                     continue
                 t = time.time()
                 # print("UartReceiveTask rec data", int(round(t * 1000)), data)
                 if len(data):
                     uartFifo.put(data)
-                    uartPacektFifo.enqueue(data)
+                    uartPacketFifo.enqueue(data)
             else:
                 time.sleep(0.1)
 
     def cmd_packet_exec(self, cmdPacket):
         self.cmdLock.acquire()
-        if self.ser.is_open:
+        if self.control_ser.is_open:
             print("ser.write:", cmdPacket.hex())
             try:
-                self.ser.write(cmdPacket)
+                self.control_ser.write(cmdPacket)
             except:
                 print("ser.write fail")
                 # QMessageBox.critical(self, "Cmd Error", "write fail")
@@ -105,11 +164,6 @@ class SmartBedEnvTest(gym.Env):
             else:
                 print("cmd ack timeout")
         self.cmdLock.release()
-
-    def stop_threads(self):
-        self.running = False
-        self.uartReceiveThread.join()
-        self.packetParaseThread.join()
 
     def airbag_pressure_display(self, data):
         for i in range(6):
@@ -152,43 +206,27 @@ class SmartBedEnvTest(gym.Env):
             print("Cmd success!")
 
     # def read_pressure_data(self):
-    #     # read map pressure
-    #     if self.ser.in_waiting:
-    #         rawBytesArr = self.ser.read(self.ser.in_waiting)
-    #         lowpresDataList = deviceUser.lowPressAnalysis(rawBytesArr)
-    #
-    #         if lowpresDataList is not None:
-    #             print(lowpresDataList)
-    #             return lowpresDataList
-    #         else:
-    #             print("Error processing pressure data.")
-    #             return None
-    #     else:
-    #         print("No data available from serial port.")
+    #     if not self.ser.is_open:
+    #         print("Serial port is closed!!!!")
     #         return None
-
-    def read_pressure_data(self):
-        if not self.ser.is_open:
-            print("Serial port is closed!!!!")
-            return None
-
-        try:
-            if self.ser.in_waiting > 0:
-                rawBytesArr = self.ser.read(self.ser.in_waiting)
-                lowpresDataList = deviceUser.lowPressAnalysis(rawBytesArr)
-
-                if lowpresDataList is not None:
-                    print(lowpresDataList)
-                    return lowpresDataList
-                else:
-                    print("Error processing pressure data.")
-                    return None
-            else:
-                print("No data available from serial port.")
-                return None
-        except serial.SerialException as e:
-            print(f"Error reading data: {e}")
-            return None
+    #
+    #     try:
+    #         if self.ser.in_waiting > 0:
+    #             rawBytesArr = self.ser.read(self.ser.in_waiting)
+    #             lowpresDataList = deviceUser.lowPressAnalysis(rawBytesArr)
+    #
+    #             if lowpresDataList is not None:
+    #                 print(lowpresDataList)
+    #                 return lowpresDataList
+    #             else:
+    #                 print("Error processing pressure data.")
+    #                 return None
+    #         else:
+    #             print("No data available from serial port.")
+    #             return None
+    #     except serial.SerialException as e:
+    #         print(f"Error reading data: {e}")
+    #         return None
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -201,50 +239,53 @@ class SmartBedEnvTest(gym.Env):
         return self._get_obs, {}
 
     def step(self, action):
-        reward = 0.0
-        done = False
-        self.action_time_steps += 1
-        self.action_time += self.time_per_action
+        with self.obsLock:
+            pressure_values = self.obs.copy()
 
-        # action: 0:no change, 1:inflation, 2:stop, 3:deflation
-        # take action of 6 airbags
+            reward = 0.0
+            done = False
+            self.action_time_steps += 1
+            self.action_time += self.time_per_action
 
-        self.send_airbag_control_command(action)
+            # action: 0:no change, 1:inflation, 2:stop, 3:deflation
+            # take action of 6 airbags
 
-        pressure_values = self.read_pressure_data()
-        if pressure_values is None:
-            print("Failed to read pressure data, skipping step.")
+            self.send_airbag_control_command(action)
+
+            if pressure_values is None:
+                print("Failed to read pressure data, skipping step.")
+                return self._get_obs, reward, done, False, {}
+
+            self.obs = pressure_values  # Update pressure in observation
+            pressure_variance = np.var(pressure_values)
+            pressure_change_continuity = np.mean(np.abs(self.previous_pressure_values - pressure_values))
+            self.previous_pressure_values = pressure_values.copy()
+
+            action_change_continuity = np.mean(np.abs(self.previous_action - action))
+            self.previous_action = action.copy()
+
+            # set reward
+            # pressure distribution
+            if pressure_variance == 0:
+                reward += 10.0
+            else:
+                reward += 1.0 / (pressure_variance + 1)  # prevent division by 0
+
+            reward -= (pressure_change_continuity + action_change_continuity)
+
+            self.total_reward += reward
+
+            print("self.obs:", self.obs)
+            if self.obs == 0:
+                done = True
+                self.episode += 1
+
             return self._get_obs, reward, done, False, {}
-
-        self.obs = pressure_values  # Update pressure in observation
-        pressure_variance = np.var(pressure_values)
-        pressure_change_continuity = np.mean(np.abs(self.previous_pressure_values - pressure_values))
-        self.previous_pressure_values = pressure_values.copy()
-
-        action_change_continuity = np.mean(np.abs(self.previous_action - action))
-        self.previous_action = action.copy()
-
-        # set reward
-        # pressure distribution
-        if pressure_variance == 0:
-            reward += 10.0
-        else:
-            reward += 1.0 / (pressure_variance + 1)  # prevent division by 0
-
-        reward -= (pressure_change_continuity + action_change_continuity)
-
-        self.total_reward += reward
-
-        print("self.obs:", self.obs)
-        if self.obs == 0:
-            done = True
-            self.episode += 1
-
-        return self._get_obs, reward, done, False, {}
 
     def __del__(self):
         self.stop_threads()
-        self.close_serial_port()
+        self.close_serial_port(self.pressure_ser, "pressure")
+        self.close_serial_port(self.control_ser, "control")
 
 
 register(
