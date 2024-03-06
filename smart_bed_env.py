@@ -253,6 +253,7 @@ class SmartBedEnv(gym.Env):
         self.pressure_temp_2nd = np.zeros(16)
         self.previous_pressure_values = np.zeros(16)
         self.pressDataList = []
+        self.action_phase = 'idle'
         print('reset train_obs: ', self._get_obs)
         return self._get_obs, {}
 
