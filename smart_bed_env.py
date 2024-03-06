@@ -199,35 +199,15 @@ class SmartBedEnv(gym.Env):
         else:
             action_code = 0
 
+        print("action_code: ", action_code)
+        print("mapByte.char: ", mapByte.char)
+
         # Convert the action to the corresponding command packet
         cmdPacketData = deviceUser.airControlCmdPacketSend(index, action_code, mapByte.char, cfgTime)
         if not self.cmd_packet_exec(cmdPacketData):
             print("Cmd Error: No response!")
         else:
             print("Cmd success!")
-
-    # def read_pressure_data(self):
-    #     if not self.ser.is_open:
-    #         print("Serial port is closed!!!!")
-    #         return None
-    #
-    #     try:
-    #         if self.ser.in_waiting > 0:
-    #             rawBytesArr = self.ser.read(self.ser.in_waiting)
-    #             lowpresDataList = deviceUser.lowPressAnalysis(rawBytesArr)
-    #
-    #             if lowpresDataList is not None:
-    #                 print(lowpresDataList)
-    #                 return lowpresDataList
-    #             else:
-    #                 print("Error processing pressure data.")
-    #                 return None
-    #         else:
-    #             print("No data available from serial port.")
-    #             return None
-    #     except serial.SerialException as e:
-    #         print(f"Error reading data: {e}")
-    #         return None
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
