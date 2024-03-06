@@ -28,16 +28,23 @@ class SmartBedEnv(gym.Env):
         self.alpha = 0.1
         self.episode = 1
         self.output_episode = 100
-        self.time_per_action = 0.1
 
-        self.action_space = spaces.MultiDiscrete([4] * 6)  # 0:no change, 1:inflation, 2:stop, 3:deflation
+        self.action_space = spaces.MultiDiscrete([3] * 6)  # 0:no change, 1:inflation, 2:deflation
         low_obs = np.full(16, 0).astype(np.float32)
         high_obs = np.full(16, 4096).astype(np.float32)  # lack of normalization
         self.observation_space = spaces.Box(low_obs, high_obs)
         self.obs = np.zeros(16)
+        self.pressure_temp = np.zeros(16)
+        self.pressure_temp_2nd = np.zeros(16)
         self.previous_pressure_values = np.zeros(16)
         # self.previous_action = np.zeros(6)  # here need to change to the previous inner pressure of the airbag
         self.pressDataList = []
+
+        self.last_update_time = time.time()  # 记录上一次更新观测值的时间
+        self.inflation_time = 10  # 充气时间
+        self.deflation_time = 5  # 放气时间
+        self.cycle_time = self.inflation_time + self.deflation_time  # 完整周期时间15s
+        self.action_phase = 'idle'  # 当前阶段: idle, inflating, deflating
 
         # Serial port initialization for communication with the smart bed hardware
         self.running = True
@@ -97,7 +104,6 @@ class SmartBedEnv(gym.Env):
 
     def mat_task(self):
         while self.running:
-            # here delete while True
             if self.pressure_ser.is_open:
                 try:
                     data = self.pressure_ser.read(1000)
@@ -121,7 +127,7 @@ class SmartBedEnv(gym.Env):
 
                                 if self.pressDataList is not None:
                                     with self.obsLock:
-                                        self.obs = sum_arr / len(self.pressDataList)
+                                        self.pressure_temp = sum_arr / len(self.pressDataList)
                                 self.pressDataList = []
                 except Exception as e:
                     print(f"Error reading pressure data: {e}")
@@ -169,35 +175,63 @@ class SmartBedEnv(gym.Env):
         for i in range(6):
             print("index[%d]: %.2f" % (i, data[i]))
 
-    def send_airbag_control_command(self, action):
-        print("Action is: ", action)
+    def execute_inflation_action(self, action):
+        print("Now execute inflation!")
         if not isinstance(action, (list, np.ndarray)):
             action = [action]
 
         index = 0
-        cfgTime = 0XFF  # 1-20(S) or 0XFF(always run)
+        # cfgTime = 0XFF  # 1-20(S) or 0XFF(always run)
+        cfgTime = 10
         mapByte = deviceUser.airMap()
         mapByte.char = 0  # resets all airbag controls to 0
 
         # Update mapByte based on the action for each airbag
         airbag_mapping = ['xiaoTui', 'daTui', 'Tun', 'Yao', 'Xiong', 'Jian']  # according to map_bits
         for i, act in enumerate(action):
-            if act > 0:
+            if act == 1:
                 setattr(mapByte.bit, airbag_mapping[i], 1)  # eg. mapByte.bit.xiaoTui = 1
 
         if mapByte.char == 0:
             print("No airbag control action specified.")
             return
 
-        # action_code: 1: inflation, 2: stop, 3: deflation
-        if 1 in action:
-            action_code = 1
-        elif 2 in action:
-            action_code = 2
-        elif 3 in action:
-            action_code = 3
+        # action_code: 0: no action 1: inflation, 2: stop, 3: deflation
+        action_code = 1
+
+        print("action_code: ", action_code)
+        print("mapByte.char: ", mapByte.char)
+
+        # Convert the action to the corresponding command packet
+        cmdPacketData = deviceUser.airControlCmdPacketSend(index, action_code, mapByte.char, cfgTime)
+        if not self.cmd_packet_exec(cmdPacketData):
+            print("Cmd Error: No response!")
         else:
-            action_code = 0
+            print("Cmd success!")
+
+    def execute_deflation_action(self, action):
+        print("Now execute deflation!")
+        if not isinstance(action, (list, np.ndarray)):
+            action = [action]
+
+        index = 0
+        # cfgTime = 0XFF  # 1-20(S) or 0XFF(always run)
+        cfgTime = 5
+        mapByte = deviceUser.airMap()
+        mapByte.char = 0  # resets all airbag controls to 0
+
+        # Update mapByte based on the action for each airbag
+        airbag_mapping = ['xiaoTui', 'daTui', 'Tun', 'Yao', 'Xiong', 'Jian']  # according to map_bits
+        for i, act in enumerate(action):
+            if act == 3:
+                setattr(mapByte.bit, airbag_mapping[i], 3)  # eg. mapByte.bit.xiaoTui = 3
+
+        if mapByte.char == 0:
+            print("No airbag control action specified.")
+            return
+
+        # action_code: 0: no action 1: inflation, 2: stop, 3: deflation
+        action_code = 3
 
         print("action_code: ", action_code)
         print("mapByte.char: ", mapByte.char)
@@ -212,57 +246,70 @@ class SmartBedEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.total_reward = 0.0
-        self.action_time = 0.0
-        self.action_time_steps = 0
         self.obs = np.zeros(16)  # pressure
         self._get_obs = self.obs.astype(np.float32)
+        self.last_update_time = time.time()
+        self.pressure_temp = np.zeros(16)
+        self.pressure_temp_2nd = np.zeros(16)
+        self.previous_pressure_values = np.zeros(16)
+        self.pressDataList = []
         print('reset train_obs: ', self._get_obs)
         return self._get_obs, {}
 
     def step(self, action):
+        print("Action is: ", action)
         with self.obsLock:
-            pressure_values = self.obs.copy()
+            current_time = time.time()
+            elapsed_time = current_time - self.last_update_time
+            if elapsed_time >= self.cycle_time:
+                if self.action_phase == 'idle':
+                    self.pressure_temp_2nd = self.pressure_temp.copy()
+                    self.last_update_time = current_time
+                    self.action_phase = 'inflating'
+                    # 执行充气动作
+                    self.execute_inflation_action(action)
+                elif self.action_phase == 'inflating':
+                    # 放气阶段开始
+                    self.action_phase = 'deflating'
+                    # 执行放气动作
+                    self.execute_deflation_action(action)
+                elif self.action_phase == 'deflating':
+                    # 一个周期结束，进入下一个周期的空闲阶段
+                    self.action_phase = 'idle'
 
-            reward = 0.0
-            done = False
-            self.action_time_steps += 1
-            self.action_time += self.time_per_action
+        reward = 0.0
+        done = False
 
-            # action: 0:no change, 1:inflation, 2:stop, 3:deflation
-            # take action of 6 airbags
-
-            self.send_airbag_control_command(action)
-
-            if pressure_values is None:
-                print("Failed to read pressure data, skipping step.")
-                return self._get_obs, reward, done, False, {}
-
-            self.obs = pressure_values  # Update pressure in observation
-            pressure_variance = np.var(pressure_values)
-            pressure_change_continuity = np.mean(np.abs(self.previous_pressure_values - pressure_values))
-            self.previous_pressure_values = pressure_values.copy()
-
-            # action_change_continuity = np.mean(np.abs(self.previous_action - action))
-            # self.previous_action = action.copy()
-
-            # set reward
-            # pressure distribution
-            if pressure_variance == 0:
-                reward += 10.0
-            else:
-                reward += 1.0 / (pressure_variance + 1)  # prevent division by 0
-
-            # reward -= (pressure_change_continuity + action_change_continuity)
-            reward -= pressure_change_continuity
-
-            self.total_reward += reward
-
-            print("self.obs:", self.obs)
-            if np.all(self.obs == 0):
-                done = True
-                self.episode += 1
-
+        if self.pressure_temp_2nd is None:
+            print("Failed to read pressure data, skipping step.")
             return self._get_obs, reward, done, False, {}
+
+        self.obs = self.pressure_temp_2nd  # Update pressure in observation
+        pressure_variance = np.var(self.pressure_temp_2nd)
+        pressure_change_continuity = np.mean(np.abs(self.previous_pressure_values - self.pressure_temp_2nd))
+        self.previous_pressure_values = self.pressure_temp_2nd.copy()
+
+        # action_change_continuity = np.mean(np.abs(self.previous_action - action))
+        # self.previous_action = action.copy()
+
+        # set reward
+        # pressure distribution
+        if pressure_variance == 0:
+            reward += 10.0
+        else:
+            reward += 1.0 / (pressure_variance + 1)  # prevent division by 0
+
+        # reward -= (pressure_change_continuity + action_change_continuity)
+        reward -= pressure_change_continuity
+
+        self.total_reward += reward
+
+        print("self.obs:", self.obs)
+        if np.all(self.obs == 0):
+            done = True
+            self.episode += 1
+
+        return self._get_obs, reward, done, False, {}
 
     def __del__(self):
         self.stop_threads()
