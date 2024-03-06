@@ -50,7 +50,7 @@ class SmartBedEnvTest(gym.Env):
         self.pressure_ser.baudrate = pressure_baudrate
         self.pressure_ser.inter_byte_timeout = 0.01
         self.pressure_ser.timeout = 2
-        self.open_serial_port(self.pressure_ser, "pressure")
+        # self.open_serial_port(self.pressure_ser, "pressure")
 
         self.matThread = Thread(target=self.mat_task)
         self.matThread.start()
@@ -60,7 +60,7 @@ class SmartBedEnvTest(gym.Env):
         self.control_ser.baudrate = control_baudrate
         self.control_ser.inter_byte_timeout = 0.01
         self.control_ser.timeout = 2
-        self.open_serial_port(self.control_ser, "control")
+        # self.open_serial_port(self.control_ser, "control")
 
         self.uartReceiveThread = Thread(target=self.uart_receive_task)
         self.uartReceiveThread.start()
@@ -74,21 +74,21 @@ class SmartBedEnvTest(gym.Env):
             print("Error finding any port!")
             return None
         for port in ports:
-            print(port.description)
+            print(f"Finding {port.description} for test!")
 
     def open_serial_port(self, ser, port_type):
         try:
             ser.open()
-            print(f"{port_type.capitalize()} serial port opened successfully.")
+            print(f"{port_type.capitalize()} serial port for test opened successfully.")
         except Exception as e:
-            print(f"Error opening {port_type} serial port: {e}")
+            print(f"Error opening {port_type} serial port for test: {e}")
 
     def close_serial_port(self, ser, port_type):
         try:
             ser.close()
-            print(f"{port_type.capitalize()} serial port closed successfully.")
+            print(f"{port_type.capitalize()} serial port for test closed successfully.")
         except Exception as e:
-            print(f"Error closing {port_type} serial port: {e}")
+            print(f"Error closing {port_type} serial port for test: {e}")
 
     def stop_threads(self):
         self.running = False

@@ -40,7 +40,7 @@ def collect_raw_packet(rawdata, p_Packet):
         else:
             rawdata.pop(0)
             if len(rawdata) == 0:
-                print("Not found start byte")
+                print("Not found start byte of airbag!")
                 return -1
 
     # 检查协议包长度

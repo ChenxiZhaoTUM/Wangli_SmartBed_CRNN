@@ -36,7 +36,7 @@ class SmartBedEnv(gym.Env):
         self.observation_space = spaces.Box(low_obs, high_obs)
         self.obs = np.zeros(16)
         self.previous_pressure_values = np.zeros(16)
-        self.previous_action = np.zeros(6)  # here need to change to the previous inner pressure of the airbag
+        # self.previous_action = np.zeros(6)  # here need to change to the previous inner pressure of the airbag
         self.pressDataList = []
 
         # Serial port initialization for communication with the smart bed hardware
@@ -74,7 +74,7 @@ class SmartBedEnv(gym.Env):
             print("Error finding any port!")
             return None
         for port in ports:
-            print(port.description)
+            print(f"Finding {port.description}")
 
     def open_serial_port(self, ser, port_type):
         try:
@@ -148,11 +148,11 @@ class SmartBedEnv(gym.Env):
     def cmd_packet_exec(self, cmdPacket):
         self.cmdLock.acquire()
         if self.control_ser.is_open:
-            print("ser.write:", cmdPacket.hex())
+            print("control command ser.write:", cmdPacket.hex())
             try:
                 self.control_ser.write(cmdPacket)
             except:
-                print("ser.write fail")
+                print("Control command ser.write fail!")
                 # QMessageBox.critical(self, "Cmd Error", "write fail")
                 self.cmdLock.release()
                 return False
@@ -170,6 +170,7 @@ class SmartBedEnv(gym.Env):
             print("index[%d]: %.2f" % (i, data[i]))
 
     def send_airbag_control_command(self, action):
+        print("Action is: ", action)
         if not isinstance(action, (list, np.ndarray)):
             action = [action]
 
@@ -235,7 +236,7 @@ class SmartBedEnv(gym.Env):
         self.action_time_steps = 0
         self.obs = np.zeros(16)  # pressure
         self._get_obs = self.obs.astype(np.float32)
-        print('train_obs: ', self._get_obs)
+        print('reset train_obs: ', self._get_obs)
         return self._get_obs, {}
 
     def step(self, action):
@@ -261,8 +262,8 @@ class SmartBedEnv(gym.Env):
             pressure_change_continuity = np.mean(np.abs(self.previous_pressure_values - pressure_values))
             self.previous_pressure_values = pressure_values.copy()
 
-            action_change_continuity = np.mean(np.abs(self.previous_action - action))
-            self.previous_action = action.copy()
+            # action_change_continuity = np.mean(np.abs(self.previous_action - action))
+            # self.previous_action = action.copy()
 
             # set reward
             # pressure distribution
@@ -271,12 +272,13 @@ class SmartBedEnv(gym.Env):
             else:
                 reward += 1.0 / (pressure_variance + 1)  # prevent division by 0
 
-            reward -= (pressure_change_continuity + action_change_continuity)
+            # reward -= (pressure_change_continuity + action_change_continuity)
+            reward -= pressure_change_continuity
 
             self.total_reward += reward
 
             print("self.obs:", self.obs)
-            if self.obs == 0:
+            if np.all(self.obs == 0):
                 done = True
                 self.episode += 1
 
