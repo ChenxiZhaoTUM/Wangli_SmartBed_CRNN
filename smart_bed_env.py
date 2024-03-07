@@ -70,18 +70,16 @@ class SmartBedEnv(gym.Env):
 
     def __init__(self, render_mode=None, control_port='COM3', control_baudrate=115200,
                  pressure_port='COM4', pressure_baudrate=115200):
-        self.alpha = 0.1
         self.episode = 1
-        self.output_episode = 100
 
         self.action_space = spaces.MultiDiscrete([3] * 6)  # 0:no change, 1:inflation, 2:deflation
-        low_obs = np.full(16, 0).astype(np.float32)
-        high_obs = np.full(16, 4096).astype(np.float32)  # lack of normalization
+        low_obs = np.zeros(16, dtype=np.float32)
+        high_obs = np.full(16, 4096, dtype=np.float32)  # lack of normalization
         self.observation_space = spaces.Box(low_obs, high_obs)
         self.obs = np.zeros(16)
-        self.pressure_temp = np.zeros(16)
-        self.pressure_temp_2nd = np.zeros(16)
-        self.previous_pressure_values = np.zeros(16)
+        self.pressure_temp = np.zeros(16, dtype=np.float32)
+        self.pressure_temp_2nd = np.zeros(16, dtype=np.float32)
+        self.previous_pressure_values = np.zeros(16, dtype=np.float32)
         # self.previous_action = np.zeros(6)  # here need to change to the previous inner pressure of the airbag
         self.pressDataList = []
 
@@ -250,8 +248,6 @@ class SmartBedEnv(gym.Env):
         # Convert the action to the corresponding command packet
         cmdPacketData = deviceUser.airControlCmdPacketSend(index, action_code, mapByte.char, cfgTime)
 
-        time.sleep(10)
-
         if not self.cmd_packet_exec(cmdPacketData):
             print("Cmd Error: No response!")
         else:
@@ -287,8 +283,6 @@ class SmartBedEnv(gym.Env):
         # Convert the action to the corresponding command packet
         cmdPacketData = deviceUser.airControlCmdPacketSend(index, action_code, mapByte.char, cfgTime)
 
-        time.sleep(5)
-
         if not self.cmd_packet_exec(cmdPacketData):
             print("Cmd Error: No response!")
         else:
@@ -309,16 +303,21 @@ class SmartBedEnv(gym.Env):
 
     def step(self, action):
         print("Action is: ", action)
+
+        current_time = time.time()
+        elapsed_time = current_time - self.last_update_time
+        self.last_update_time = current_time
+
+        if elapsed_time <= self.cycle_time:
+            time.sleep(self.cycle_time - elapsed_time)
+
+        self.execute_inflation_action(action)
+        time.sleep(self.inflation_time)  # 等待充气完成
+        self.execute_deflation_action(action)
+        time.sleep(self.deflation_time)  # 等待放气完成
+
         with self.obsLock:
-            current_time = time.time()
-            elapsed_time = current_time - self.last_update_time
-            if elapsed_time >= self.cycle_time:
-                self.pressure_temp_2nd = self.pressure_temp.copy()
-                self.execute_inflation_action(action)
-                self.execute_deflation_action(action)
-                self.last_update_time = current_time
-            else:
-                time.sleep(self.cycle_time - elapsed_time)
+            self.pressure_temp_2nd = self.pressure_temp.copy()
 
         reward = 0.0
         done = False
