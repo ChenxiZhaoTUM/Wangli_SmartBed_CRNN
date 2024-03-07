@@ -2,12 +2,15 @@ import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.envs.registration import register
 import numpy as np
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QApplication, QDialog, QMainWindow, QMessageBox, QVBoxLayout, QWidget, QFileDialog
+from PyQt5.QtGui import QPalette
+from PyQt5.QtCore import Qt, pyqtSlot, QTimer, QThread, pyqtSignal, QCoreApplication
 import serial
 import serial.tools.list_ports
 import UserProtocolHandle as matUser
 from single_line_data_for_real_time import process_pressure_values
 import DeviceUserProtocolHandle as deviceUser
-from DeviceUserExample import packetHandleThread
 import time
 from queue import Queue
 from threading import Thread, Lock, Event
@@ -18,6 +21,48 @@ cmdAckEvent = Event()
 uartPacketFifo = deviceUser.ProtocolDatasFIFO()
 matFifo = matUser.ProtocolDatasFIFO()
 pressDataList = []
+
+
+class packetHandleThread(QThread):
+    airPressReflash = pyqtSignal(list)
+
+    def __init__(self):
+        super().__init__()
+
+    def __del__(self):
+        self.wait()
+
+    def run(self):
+        while True:
+            data = uartFifo.get()
+            print("packetHandleTask packet data:", data.hex())
+            if len(data) == 0:
+                continue
+            packet = bytearray()
+            while uartPacketFifo.get_fifo_length():
+                packet.clear()
+                if uartPacketFifo.collect_protocol_packet(packet) == 0:
+                    if packet[0] == 0XA5 and packet[len(packet) - 1] == 0X55 and len(packet) == packet[1]:
+                        print("get a vaild packet data")
+                        cmd = packet[2]
+                        packetLength = packet[1]
+                        if cmd == 0x02 or cmd == 0x03 or cmd == 0x04 or cmd == 0x05 or cmd == 0x08 or cmd == 0x09 or cmd == 0x0A or cmd == 0X0D:
+                            print("cmdAckEvent.set(),cmd", cmd)
+                            cmdAckEvent.set()
+                        elif cmd == 0x06:  # 压力数据通知
+                            pass
+                        elif cmd == 0x07:  # 气压数据通知
+                            if len(packet) - 5 != 12 * 6 + 2:
+                                print("invaild packet")
+                                continue
+                            rawDataArr = bytearray(12 * 6 + 2)
+                            rawDataArr[0:(12 * 6 + 2)] = packet[3:len(packet) - 2]
+                            presDataList = deviceUser.airPressAnalysis(rawDataArr)
+                            self.airPressReflash.emit(presDataList)
+                        elif cmd == 0X0B:  # 温度数据
+                            curTemper = packet[6]
+                            print("cmdAckEvent.set(),cmd", cmd)
+                            cmdAckEvent.set()
 
 
 class SmartBedEnv(gym.Env):
@@ -44,7 +89,7 @@ class SmartBedEnv(gym.Env):
         self.inflation_time = 10  # 充气时间
         self.deflation_time = 5  # 放气时间
         self.cycle_time = self.inflation_time + self.deflation_time  # 完整周期时间15s
-        self.action_phase = 'idle'  # 当前阶段: idle, inflating, deflating
+        # self.action_phase = 'idle'  # 当前阶段: idle, inflating, deflating
 
         # Serial port initialization for communication with the smart bed hardware
         self.running = True
@@ -204,6 +249,9 @@ class SmartBedEnv(gym.Env):
 
         # Convert the action to the corresponding command packet
         cmdPacketData = deviceUser.airControlCmdPacketSend(index, action_code, mapByte.char, cfgTime)
+
+        time.sleep(10)
+
         if not self.cmd_packet_exec(cmdPacketData):
             print("Cmd Error: No response!")
         else:
@@ -238,6 +286,9 @@ class SmartBedEnv(gym.Env):
 
         # Convert the action to the corresponding command packet
         cmdPacketData = deviceUser.airControlCmdPacketSend(index, action_code, mapByte.char, cfgTime)
+
+        time.sleep(5)
+
         if not self.cmd_packet_exec(cmdPacketData):
             print("Cmd Error: No response!")
         else:
@@ -253,7 +304,6 @@ class SmartBedEnv(gym.Env):
         self.pressure_temp_2nd = np.zeros(16)
         self.previous_pressure_values = np.zeros(16)
         self.pressDataList = []
-        self.action_phase = 'idle'
         print('reset train_obs: ', self._get_obs)
         return self._get_obs, {}
 
@@ -263,20 +313,12 @@ class SmartBedEnv(gym.Env):
             current_time = time.time()
             elapsed_time = current_time - self.last_update_time
             if elapsed_time >= self.cycle_time:
-                if self.action_phase == 'idle':
-                    self.pressure_temp_2nd = self.pressure_temp.copy()
-                    self.last_update_time = current_time
-                    self.action_phase = 'inflating'
-                    # 执行充气动作
-                    self.execute_inflation_action(action)
-                elif self.action_phase == 'inflating':
-                    # 放气阶段开始
-                    self.action_phase = 'deflating'
-                    # 执行放气动作
-                    self.execute_deflation_action(action)
-                elif self.action_phase == 'deflating':
-                    # 一个周期结束，进入下一个周期的空闲阶段
-                    self.action_phase = 'idle'
+                self.pressure_temp_2nd = self.pressure_temp.copy()
+                self.execute_inflation_action(action)
+                self.execute_deflation_action(action)
+                self.last_update_time = current_time
+            else:
+                time.sleep(self.cycle_time - elapsed_time)
 
         reward = 0.0
         done = False
@@ -309,6 +351,8 @@ class SmartBedEnv(gym.Env):
         if np.all(self.obs == 0):
             done = True
             self.episode += 1
+
+        self.pressure_temp_2nd = None
 
         return self._get_obs, reward, done, False, {}
 
