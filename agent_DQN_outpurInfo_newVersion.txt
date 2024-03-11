@@ -2,121 +2,313 @@ Finding USB 串行设备 (COM3)
 Finding USB-Enhanced-SERIAL CH343 (COM4)
 Pressure serial port opened successfully.
 Control serial port opened successfully.
+--------------------------
+Episode:  0
 reset train_obs:  [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
-Action is:  [0 0 1 0 1 2]
+
+Step:  0
+Action is:  [1 0 1 1 2 2]
 Now execute inflation!
 action_code:  1
-mapByte.char:  20
-control command ser.write: a509020001140acf55
-packetHandleTask packet data: a50a020001140a00d055
+mapByte.char:  13
+control command ser.write: a5090200010d0ac855
+packetHandleTask packet data: a50a0200010d0a00c955
 Found start byte: 0xa5
-Successfully collected protocol packet: a50a020001140a00d055
+Successfully collected protocol packet: a50a0200010d0a00c955
 get a vaild packet data
 cmdAckEvent.set(),cmd 2
 cmd ack ok
 Cmd success!
 Now execute deflation!
 action_code:  3
-mapByte.char:  32
-control command ser.write: a5090200032005d855
-packetHandleTask packet data: a50a020003200500d955
-Found start byte: 0xa5
-Successfully collected protocol packet: a50a020003200500d955
-get a vaild packet data
-cmdAckEvent.set(),cmd 2
-cmd ack ok
-Cmd success!
-self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
-    0.  1496.7    0.     0.     0.     0. ]
-Action is:  [1 1 0 0 1 2]
-Now execute inflation!
-action_code:  1
-mapByte.char:  19
-control command ser.write: a509020001130ace55
-packetHandleTask packet data: a50a020001130a00cf55
-Found start byte: 0xa5
-Successfully collected protocol packet: a50a020001130a00cf55
-get a vaild packet data
-cmdAckEvent.set(),cmd 2
-cmd ack ok
-Cmd success!
-Now execute deflation!
-action_code:  3
-mapByte.char:  32
-control command ser.write: a5090200032005d855
-packetHandleTask packet data: a50a020003200500d955
-Found start byte: 0xa5
-Successfully collected protocol packet: a50a020003200500d955
-get a vaild packet data
-cmdAckEvent.set(),cmd 2
-cmd ack ok
-Cmd success!
-self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
-    0.  1496.2    0.     0.     0.     0. ]
-Action is:  [2 0 0 2 1 1]
-Now execute inflation!
-action_code:  1
 mapByte.char:  48
-control command ser.write: a509020001300aeb55
-packetHandleTask packet data: a50a020001300a00ec55
+control command ser.write: a5090200033005e855
+packetHandleTask packet data: a50a020003300500e955
 Found start byte: 0xa5
-Successfully collected protocol packet: a50a020001300a00ec55
+Successfully collected protocol packet: a50a020003300500e955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
+    0.  1487.1    0.     0.     0.     0. ]
+
+Step:  1
+Action is:  [2 2 0 2 0 2]
+Now execute inflation!
+No airbag control action specified.
+Now execute deflation!
+action_code:  3
+mapByte.char:  43
+control command ser.write: a5090200032b05e355
+packetHandleTask packet data: a50a0200032b0500e455
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a0200032b0500e455
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
+    0.  1489.5    0.     0.     0.     0. ]
+
+Step:  2
+Action is:  [2 2 2 1 2 0]
+Now execute inflation!
+action_code:  1
+mapByte.char:  8
+control command ser.write: a509020001080ac355
+packetHandleTask packet data: a50a020001080a00c455
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a020001080a00c455
 get a vaild packet data
 cmdAckEvent.set(),cmd 2
 cmd ack ok
 Cmd success!
 Now execute deflation!
 action_code:  3
-mapByte.char:  9
-control command ser.write: a5090200030905c155
-packetHandleTask packet data: a50a020003090500c255
+mapByte.char:  23
+control command ser.write: a5090200031705cf55
+packetHandleTask packet data: a50a020003170500d055
 Found start byte: 0xa5
-Successfully collected protocol packet: a50a020003090500c255
+Successfully collected protocol packet: a50a020003170500d055
 get a vaild packet data
 cmdAckEvent.set(),cmd 2
 cmd ack ok
 Cmd success!
 self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
-    0.  1496.8    0.     0.     0.     0. ]
-Action is:  [0 0 1 0 1 2]
+    0.  1490.6    0.     0.     0.     0. ]
+
+Step:  3
+Action is:  [1 0 1 1 2 2]
 Now execute inflation!
 action_code:  1
-mapByte.char:  20
-control command ser.write: a509020001140acf55
-packetHandleTask packet data: a50a020001140a00d055
+mapByte.char:  13
+control command ser.write: a5090200010d0ac855
+packetHandleTask packet data: a50a0200010d0a00c955
 Found start byte: 0xa5
-Successfully collected protocol packet: a50a020001140a00d055
+Successfully collected protocol packet: a50a0200010d0a00c955
 get a vaild packet data
 cmdAckEvent.set(),cmd 2
 cmd ack ok
 Cmd success!
 Now execute deflation!
 action_code:  3
-mapByte.char:  32
-control command ser.write: a5090200032005d855
-packetHandleTask packet data: a50a020003200500d955
+mapByte.char:  48
+control command ser.write: a5090200033005e855
+packetHandleTask packet data: a50a020003300500e955
 Found start byte: 0xa5
-Successfully collected protocol packet: a50a020003200500d955
+Successfully collected protocol packet: a50a020003300500e955
 get a vaild packet data
 cmdAckEvent.set(),cmd 2
 cmd ack ok
 Cmd success!
 self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
-    0.  1494.9    0.     0.     0.     0. ]
-Action is:  [0 2 2 0 1 0]
+    0.  1491.8    0.     0.     0.     0. ]
+
+Step:  4
+Action is:  [1 0 0 0 2 0]
 Now execute inflation!
 action_code:  1
+mapByte.char:  1
+control command ser.write: a509020001010abc55
+packetHandleTask packet data: a50a020001010a00bd55
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a020001010a00bd55
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+Now execute deflation!
+action_code:  3
 mapByte.char:  16
-control command ser.write: a509020001100acb55
-packetHandleTask packet data: a50a020001100a00cc55
+control command ser.write: a5090200031005c855
+packetHandleTask packet data: a50a020003100500c955
 Found start byte: 0xa5
-Successfully collected protocol packet: a50a020001100a00cc55
+Successfully collected protocol packet: a50a020003100500c955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
+    0.  1488.1    0.     0.     0.     0. ]
+
+Step:  5
+Action is:  [1 0 1 1 2 2]
+Now execute inflation!
+action_code:  1
+mapByte.char:  13
+control command ser.write: a5090200010d0ac855
+packetHandleTask packet data: a50a0200010d0a00c955
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a0200010d0a00c955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+Now execute deflation!
+action_code:  3
+mapByte.char:  48
+control command ser.write: a5090200033005e855
+packetHandleTask packet data: a50a020003300500e955
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a020003300500e955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
+    0.  1488.9    0.     0.     0.     0. ]
+
+Step:  6
+Action is:  [1 0 1 1 2 2]
+Now execute inflation!
+action_code:  1
+mapByte.char:  13
+control command ser.write: a5090200010d0ac855
+packetHandleTask packet data: a50a0200010d0a00c955
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a0200010d0a00c955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+Now execute deflation!
+action_code:  3
+mapByte.char:  48
+control command ser.write: a5090200033005e855
+packetHandleTask packet data: a50a020003300500e955
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a020003300500e955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
+    0.  1520.7    0.     0.     0.     0. ]
+
+Step:  7
+Action is:  [1 0 1 1 2 2]
+Now execute inflation!
+action_code:  1
+mapByte.char:  13
+control command ser.write: a5090200010d0ac855
+packetHandleTask packet data: a50a0200010d0a00c955
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a0200010d0a00c955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+Now execute deflation!
+action_code:  3
+mapByte.char:  48
+control command ser.write: a5090200033005e855
+packetHandleTask packet data: a50a020003300500e955
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a020003300500e955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
+    0.  1493.8    0.     0.     0.     0. ]
+
+Step:  8
+Action is:  [1 0 1 1 2 2]
+Now execute inflation!
+action_code:  1
+mapByte.char:  13
+control command ser.write: a5090200010d0ac855
+packetHandleTask packet data: a50a0200010d0a00c955
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a0200010d0a00c955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+Now execute deflation!
+action_code:  3
+mapByte.char:  48
+control command ser.write: a5090200033005e855
+packetHandleTask packet data: a50a020003300500e955
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a020003300500e955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
+    0.  1523.9    0.     0.     0.     0. ]
+
+Step:  9
+Action is:  [1 0 1 1 2 2]
+Now execute inflation!
+action_code:  1
+mapByte.char:  13
+control command ser.write: a5090200010d0ac855
+packetHandleTask packet data: a50a0200010d0a00c955
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a0200010d0a00c955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+Now execute deflation!
+action_code:  3
+mapByte.char:  48
+control command ser.write: a5090200033005e855
+packetHandleTask packet data: a50a020003300500e955
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a020003300500e955
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
+    0.  1515.2    0.     0.     0.     0. ]
+
+Step:  10
+Action is:  [0 0 2 0 0 1]
+Now execute inflation!
+action_code:  1
+mapByte.char:  32
+control command ser.write: a509020001200adb55
+packetHandleTask packet data: a50a020001200a00dc55
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a020001200a00dc55
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+Now execute deflation!
+action_code:  3
+mapByte.char:  4
+control command ser.write: a5090200030405bc55
+packetHandleTask packet data: a50a020003040500bd55
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a020003040500bd55
+get a vaild packet data
+cmdAckEvent.set(),cmd 2
+cmd ack ok
+Cmd success!
+self.obs: [   0.     0.     0.     0.     0.     0.     0.     0.     0.     0.
+    0.  1527.8    0.     0.     0.     0. ]
+
+Step:  11
+Action is:  [1 0 1 1 2 2]
+Now execute inflation!
+action_code:  1
+mapByte.char:  13
+control command ser.write: a5090200010d0ac855
+packetHandleTask packet data: a50a0200010d0a00c955
+Found start byte: 0xa5
+Successfully collected protocol packet: a50a0200010d0a00c955
 get a vaild packet data
 cmdAckEvent.set(),cmd 2
 cmd ack ok
 Cmd success!
 Traceback (most recent call last):
-  File "E:/Wangli_SmartBed_CRNN/agent_DQN.py", line 169, in <module>
+  File "E:/Wangli_SmartBed_CRNN/agent_DQN.py", line 173, in <module>
     next_state, reward, done, _, _ = env.step(action)  # Adjust for MultiDiscrete
   File "E:\python_env\lib\site-packages\gymnasium\wrappers\order_enforcing.py", line 56, in step
     return self.env.step(action)

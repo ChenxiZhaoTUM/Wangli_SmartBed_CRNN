@@ -161,10 +161,14 @@ learning_finish_flag = False
 frames = []
 
 for episode in range(max_episodes):
+    print("--------------------------")
+    print("Episode: ", episode)
     state, _ = env.reset()
     state = torch.from_numpy(state).float().unsqueeze(0)
 
     for step in range(max_steps):
+        print()
+        print("Step: ", step)
         action = agent.choose_action(state, episode)
         next_state, reward, done, _, _ = env.step(action)  # Adjust for MultiDiscrete
         reward = torch.tensor([reward], dtype=torch.float)
