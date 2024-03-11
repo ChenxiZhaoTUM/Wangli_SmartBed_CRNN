@@ -267,7 +267,7 @@ class SmartBedEnv(gym.Env):
         # Update mapByte based on the action for each airbag
         airbag_mapping = ['xiaoTui', 'daTui', 'Tun', 'Yao', 'Xiong', 'Jian']  # according to map_bits
         for i, act in enumerate(action):
-            if act == 3:
+            if act == 2:
                 setattr(mapByte.bit, airbag_mapping[i], 3)  # eg. mapByte.bit.xiaoTui = 3
 
         if mapByte.char == 0:
