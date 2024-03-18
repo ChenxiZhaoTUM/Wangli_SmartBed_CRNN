@@ -396,7 +396,7 @@ class SmartBedEnv(gym.Env):
 
         self.pressure_temp_2nd = None
 
-        return self._get_obs, reward, done, False, self.airbagPresList, {}
+        return self._get_obs, reward, done, False, {'presDataList': self.presDataList}
 
     def __del__(self):
         self.stop_threads()

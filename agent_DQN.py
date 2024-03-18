@@ -8,6 +8,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch import optim
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 ### experience replay
 # 构造批次化训练数据
@@ -112,7 +114,8 @@ class Agent:
         non_final_mask = torch.ByteTensor(
             tuple(map(lambda s: s is not None, batch.next_state)))  # 用于标识批量中哪些样本具有非空的下一个状态next_state (1)
         next_state_values = torch.zeros(self.batch_size)
-        next_state_values[non_final_mask] = self.model(non_final_next_state_batch).max(dim=1)[0].detach()  # 计算非终止状态下的下一状态值，max(dim=1)[0]为状态值的最大估计
+        next_state_values[non_final_mask] = self.model(non_final_next_state_batch).max(dim=1)[
+            0].detach()  # 计算非终止状态下的下一状态值，max(dim=1)[0]为状态值的最大估计
 
         # 维度: (batch_size, )
         expected_state_action_values = reward_batch + self.gamma * next_state_values
@@ -147,18 +150,58 @@ class Agent:
         return action.numpy()
 
 
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+ax1.set_title('Mat Pressures')
+line1, = ax1.plot([], [], 'r-', label='Mat Pressures')
+ax1.set_xlabel('Index')
+ax1.set_ylabel('Value')
+ax1.legend()
+
+ax2.set_title('Airbag Pressures')
+line2, = ax2.plot([], [], 'g-', label='Airbag Pressures')
+ax2.set_xlabel('Index')
+ax2.set_ylabel('Value')
+ax2.legend()
+
+pressures_data = []
+
+
+# 动画更新函数
+def animate(i):
+    if not pressures_data:
+        return line1, line2
+
+    data = pressures_data[-1]  # 获取最新数据
+    if data['next_state'] is not None:
+        line1.set_data(range(len(data['next_state'])), data['next_state'])
+        ax1.relim()  # 重新计算轴的限制
+        ax1.autoscale_view()  # 自动缩放视图
+
+    line2.set_data(range(len(data['mat_pres'])), data['airbag_pres'])
+    ax2.relim()  # 重新计算轴的限制
+    ax2.autoscale_view()  # 自动缩放视图
+
+    return line1, line2
+
+
+# 初始化动画函数
+def animate_init():
+    line1.set_data([], [])
+    line2.set_data([], [])
+    return line1, line2
+
+
+# 创建动画
+ani = FuncAnimation(fig, animate, init_func=animate_init, blit=True, interval=15000)
+
 # interaction between agent and environment
 env = gym.make('SmartBedEnv-v0')
 n_states = env.observation_space.shape[0]  # 16
 n_actions = env.action_space.shape or env.action_space.n  # 6
-
 agent = Agent(env)
 
 max_episodes = 50000
 max_steps = 200
-
-learning_finish_flag = False
-frames = []
 
 for episode in range(max_episodes):
     print("--------------------------")
@@ -170,8 +213,17 @@ for episode in range(max_episodes):
         print()
         print("Step: ", step)
         action = agent.choose_action(state, episode)
-        next_state, reward, done, _, airbagPresList, _ = env.step(action)  # Adjust for MultiDiscrete
+        next_state, reward, done, _, info = env.step(action)  # Adjust for MultiDiscrete
+
+        next_state = torch.tensor([next_state], dtype=torch.float) if next_state is not None else None
         reward = torch.tensor([reward], dtype=torch.float)
+
+        airbagPresList = info.get('airbagPresList', [])
+
+        pressures_data.append({
+            'mat_pres': next_state.numpy().squeeze() if next_state is not None else np.zeros(16),
+            'airbag_pres': np.array(airbagPresList)
+        })
 
         if done:
             next_state = None
@@ -185,3 +237,6 @@ for episode in range(max_episodes):
         if done:
             print(f'Episode: {episode}, Steps: {step}')
             break
+
+plt.tight_layout()
+plt.show()
