@@ -170,7 +170,7 @@ for episode in range(max_episodes):
         print()
         print("Step: ", step)
         action = agent.choose_action(state, episode)
-        next_state, reward, done, _, _ = env.step(action)  # Adjust for MultiDiscrete
+        next_state, reward, done, _, airbagPresList, _ = env.step(action)  # Adjust for MultiDiscrete
         reward = torch.tensor([reward], dtype=torch.float)
 
         if done:

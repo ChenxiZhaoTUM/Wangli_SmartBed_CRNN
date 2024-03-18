@@ -26,8 +26,9 @@ pressDataList = []
 class packetHandleThread(QThread):
     airPressReflash = pyqtSignal(list)
 
-    def __init__(self):
+    def __init__(self, env):
         super().__init__()
+        self.env = env
 
     def __del__(self):
         self.wait()
@@ -59,6 +60,7 @@ class packetHandleThread(QThread):
                             rawDataArr[0:(12 * 6 + 2)] = packet[3:len(packet) - 2]
                             presDataList = deviceUser.airPressAnalysis(rawDataArr)
                             self.airPressReflash.emit(presDataList)
+                            self.env.airbagPresList = presDataList
                         elif cmd == 0X0B:  # 温度数据
                             curTemper = packet[6]
                             print("cmdAckEvent.set(),cmd", cmd)
@@ -114,7 +116,9 @@ class SmartBedEnv(gym.Env):
 
         self.uartReceiveThread = Thread(target=self.uart_receive_task)
         self.uartReceiveThread.start()
-        self.packetParaseThread = packetHandleThread()
+        # self.packetParaseThread = packetHandleThread()
+        self.airbagPresList = []  # airbag pressure list
+        self.packetParaseThread = packetHandleThread(self)
         self.packetParaseThread.airPressReflash.connect(self.airbag_pressure_display)
         self.packetParaseThread.start()
 
@@ -392,7 +396,7 @@ class SmartBedEnv(gym.Env):
 
         self.pressure_temp_2nd = None
 
-        return self._get_obs, reward, done, False, {}
+        return self._get_obs, reward, done, False, self.airbagPresList, {}
 
     def __del__(self):
         self.stop_threads()
