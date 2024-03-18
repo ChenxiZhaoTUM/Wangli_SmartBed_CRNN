@@ -47,7 +47,7 @@ class packetHandleThread(QThread):
                 packet.clear()
                 if uartPacektFifo.collect_protocol_packet(packet) == 0:
                     if packet[0] == 0XA5 and packet[len(packet) - 1] == 0X55 and len(packet) == packet[1]:
-                        print("get a vaild packet data")
+                        print("get a valid packet data")
                         cmd = packet[2]
                         packetLength = packet[1]
                         if cmd == 0x02 or cmd == 0x03 or cmd == 0x04 or cmd == 0x05 or cmd == 0x08 or cmd == 0x09 or cmd == 0x0A or cmd == 0X0D:
@@ -57,7 +57,7 @@ class packetHandleThread(QThread):
                             pass
                         elif cmd == 0x07:  # 气压数据通知
                             if len(packet) - 5 != 12 * 6 + 2:
-                                print("invaild packet")
+                                print("invalid packet")
                                 continue
                             rawDataArr = bytearray(12 * 6 + 2)
                             rawDataArr[0:(12 * 6 + 2)] = packet[3:len(packet) - 2]

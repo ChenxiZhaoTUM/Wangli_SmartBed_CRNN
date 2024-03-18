@@ -288,6 +288,41 @@ class SmartBedEnv(gym.Env):
         else:
             print("Cmd success!")
 
+    def execute_nobody_deflation_action(self):
+        print("Now execute deflation because nobody!")
+
+        index = 0
+        # cfgTime = 0XFF  # 1-20(S) or 0XFF(always run)
+        cfgTime = 15
+        mapByte = deviceUser.airMap()
+        mapByte.char = 0  # resets all airbag controls to 0
+
+        # Update mapByte based on the action for each airbag
+        mapByte.bit.Jian = 1
+        mapByte.bit.Xiong = 1
+        mapByte.bit.Yao = 1
+        mapByte.bit.Tun = 1
+        mapByte.bit.daTui = 1
+        mapByte.bit.xiaoTui = 1
+
+        if mapByte.char == 0:
+            print("No airbag control action specified.")
+            return
+
+        # action_code: 0: no action 1: inflation, 2: stop, 3: deflation
+        action_code = 3
+
+        print("action_code: ", action_code)
+        print("mapByte.char: ", mapByte.char)
+
+        # Convert the action to the corresponding command packet
+        cmdPacketData = deviceUser.airControlCmdPacketSend(index, action_code, mapByte.char, cfgTime)
+
+        if not self.cmd_packet_exec(cmdPacketData):
+            print("Cmd Error: No response!")
+        else:
+            print("Cmd success!")
+
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.total_reward = 0.0
@@ -311,10 +346,14 @@ class SmartBedEnv(gym.Env):
         if elapsed_time <= self.cycle_time:
             time.sleep(self.cycle_time - elapsed_time)
 
-        self.execute_inflation_action(action)
-        time.sleep(self.inflation_time)  # 等待充气完成
-        self.execute_deflation_action(action)
-        time.sleep(self.deflation_time)  # 等待放气完成
+        if np.all(self.obs == 0):
+            self.execute_nobody_deflation_action()
+            time.sleep(self.cycle_time)
+        else:
+            self.execute_inflation_action(action)
+            time.sleep(self.inflation_time)  # 等待充气完成
+            self.execute_deflation_action(action)
+            time.sleep(self.deflation_time)  # 等待放气完成
 
         with self.obsLock:
             self.pressure_temp_2nd = self.pressure_temp.copy()

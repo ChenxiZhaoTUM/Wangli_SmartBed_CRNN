@@ -154,7 +154,7 @@ n_actions = env.action_space.shape or env.action_space.n  # 6
 
 agent = Agent(env)
 
-max_episodes = 500
+max_episodes = 50000
 max_steps = 200
 
 learning_finish_flag = False
