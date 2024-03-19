@@ -150,13 +150,33 @@ class Agent:
         return action.numpy()
 
 
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
-ax1.set_title('Mat Pressures')
-ax1.set_xlabel('Index')
-ax1.set_ylabel('Value')
-ax2.set_title('Airbag Pressures')
-ax2.set_xlabel('Index')
-ax2.set_ylabel('Value')
+global_pressures_data = []
+
+
+def add_pressure_data(mat_pres, airbag_pres):
+    # 这里，我们仅简单地将数据追加到列表中
+    # 在实际应用中，可能需要一个线程安全的队列
+    global_pressures_data.append({'mat_pres': mat_pres, 'airbag_pres': airbag_pres})
+
+
+# def update_plot(frame_number, line1, line2):
+#     if global_pressures_data:
+#         data = global_pressures_data.pop(0)  # 获取最早的数据点并从列表中移除
+#         line1.set_ydata(data['mat_pres'])
+#         line2.set_ydata(data['airbag_pres'])
+#     return line1, line2
+
+def update_plot(frame_number, ax1, ax2, line1, line2):
+    if global_pressures_data:
+        data = global_pressures_data[-1]
+        line1.set_ydata(data['mat_pres'])
+        line2.set_ydata(data['airbag_pres'])
+        ax1.relim()
+        ax1.autoscale_view()
+        ax2.relim()
+        ax2.autoscale_view()
+    return line1, line2
+
 
 # interaction between agent and environment
 env = gym.make('SmartBedEnv-v0')
@@ -164,8 +184,8 @@ n_states = env.observation_space.shape[0]  # 16
 n_actions = env.action_space.shape or env.action_space.n  # 6
 agent = Agent(env)
 
-max_episodes = 50000
-max_steps = 200
+max_episodes = 2
+max_steps = 2
 pressures_data = []
 
 for episode in range(max_episodes):
@@ -189,23 +209,30 @@ for episode in range(max_episodes):
 
         airbagPresList = info.get('airbagPresList', [])
 
-        # 更新图表数据...
-        pressures_data.append({
-            'mat_pres': next_state.numpy().squeeze() if next_state is not None else np.zeros(16),
-            'airbag_pres': np.array(airbagPresList)
-        })
-
-        # 画图的部分
-        ax1.clear()
-        ax1.plot(pressures_data[-1]['mat_pres'])
-        ax1.set_title('Mat Pressures')
-
-        ax2.clear()
-        ax2.plot(pressures_data[-1]['airbag_pres'])
-        ax2.set_title('Airbag Pressures')
-
-        plt.draw()
-        plt.pause(0.01)  # 短暂暂停，以便图表有时间更新
+        if next_state is not None:
+            mat_pres = next_state.numpy().squeeze()
+        else:
+            mat_pres = np.zeros(16)
+        airbag_pres = np.array(airbagPresList)
+        add_pressure_data(mat_pres, airbag_pres)
 
         if done:
             break
+
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+
+# 初始化mat_pres和airbag_pres的线
+line1, = ax1.plot(np.zeros(16), 'r-')  # Mat pressures
+line2, = ax2.plot(np.zeros(72), 'g-')  # Airbag pressures
+
+ax1.set_title('Mat Pressures')
+ax1.set_xlabel('Index')
+ax1.set_ylabel('Value')
+ax2.set_title('Airbag Pressures')
+ax2.set_xlabel('Index')
+ax2.set_ylabel('Value')
+
+# 创建动画
+ani = FuncAnimation(fig, update_plot, fargs=(ax1, ax2, line1, line2), interval=100)
+
+plt.show()
