@@ -205,7 +205,7 @@ for episode in range(max_episodes):
         ax2.set_title('Airbag Pressures')
 
         plt.draw()
-        plt.pause(15)  # 短暂暂停，以便图表有时间更新
-        
+        plt.pause(0.01)  # 短暂暂停，以便图表有时间更新
+
         if done:
             break
