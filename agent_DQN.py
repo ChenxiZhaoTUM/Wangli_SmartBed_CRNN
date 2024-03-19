@@ -152,47 +152,11 @@ class Agent:
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
 ax1.set_title('Mat Pressures')
-line1, = ax1.plot([], [], 'r-', label='Mat Pressures')
 ax1.set_xlabel('Index')
 ax1.set_ylabel('Value')
-ax1.legend()
-
 ax2.set_title('Airbag Pressures')
-line2, = ax2.plot([], [], 'g-', label='Airbag Pressures')
 ax2.set_xlabel('Index')
 ax2.set_ylabel('Value')
-ax2.legend()
-
-pressures_data = []
-
-
-# 动画更新函数
-def animate(i):
-    if not pressures_data:
-        return line1, line2
-
-    data = pressures_data[-1]  # 获取最新数据
-    if data['next_state'] is not None:
-        line1.set_data(range(len(data['next_state'])), data['next_state'])
-        ax1.relim()  # 重新计算轴的限制
-        ax1.autoscale_view()  # 自动缩放视图
-
-    line2.set_data(range(len(data['mat_pres'])), data['airbag_pres'])
-    ax2.relim()  # 重新计算轴的限制
-    ax2.autoscale_view()  # 自动缩放视图
-
-    return line1, line2
-
-
-# 初始化动画函数
-def animate_init():
-    line1.set_data([], [])
-    line2.set_data([], [])
-    return line1, line2
-
-
-# 创建动画
-ani = FuncAnimation(fig, animate, init_func=animate_init, blit=True, interval=15000, cache_frame_data=False)
 
 # interaction between agent and environment
 env = gym.make('SmartBedEnv-v0')
@@ -202,6 +166,7 @@ agent = Agent(env)
 
 max_episodes = 50000
 max_steps = 200
+pressures_data = []
 
 for episode in range(max_episodes):
     print("--------------------------")
@@ -224,21 +189,23 @@ for episode in range(max_episodes):
 
         airbagPresList = info.get('airbagPresList', [])
 
+        # 更新图表数据...
         pressures_data.append({
             'mat_pres': next_state.numpy().squeeze() if next_state is not None else np.zeros(16),
             'airbag_pres': np.array(airbagPresList)
         })
 
-        if done:
-            next_state = None
+        # 画图的部分
+        ax1.clear()
+        ax1.plot(pressures_data[-1]['mat_pres'])
+        ax1.set_title('Mat Pressures')
 
-        agent.memory.push(state, action, next_state, reward)
-        agent.update_q_function()
-        state = next_state
+        ax2.clear()
+        ax2.plot(pressures_data[-1]['airbag_pres'])
+        ax2.set_title('Airbag Pressures')
 
+        plt.draw()
+        plt.pause(15)  # 短暂暂停，以便图表有时间更新
+        
         if done:
-            print(f'Episode: {episode}, Steps: {step}')
             break
-
-plt.tight_layout()
-plt.show()
