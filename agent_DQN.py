@@ -192,7 +192,7 @@ def animate_init():
 
 
 # 创建动画
-ani = FuncAnimation(fig, animate, init_func=animate_init, blit=True, interval=15000)
+ani = FuncAnimation(fig, animate, init_func=animate_init, blit=True, interval=15000, cache_frame_data=False)
 
 # interaction between agent and environment
 env = gym.make('SmartBedEnv-v0')
@@ -215,7 +215,11 @@ for episode in range(max_episodes):
         action = agent.choose_action(state, episode)
         next_state, reward, done, _, info = env.step(action)  # Adjust for MultiDiscrete
 
-        next_state = torch.tensor([next_state], dtype=torch.float) if next_state is not None else None
+        if next_state is not None:
+            next_state = torch.tensor(next_state, dtype=torch.float).unsqueeze(0)
+        else:
+            next_state = None
+
         reward = torch.tensor([reward], dtype=torch.float)
 
         airbagPresList = info.get('airbagPresList', [])
@@ -227,8 +231,6 @@ for episode in range(max_episodes):
 
         if done:
             next_state = None
-        else:
-            next_state = torch.from_numpy(next_state).float().unsqueeze(0)
 
         agent.memory.push(state, action, next_state, reward)
         agent.update_q_function()

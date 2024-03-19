@@ -347,13 +347,13 @@ class SmartBedEnv(gym.Env):
         elapsed_time = current_time - self.last_update_time
         self.last_update_time = current_time
 
-        if elapsed_time <= self.cycle_time:
-            time.sleep(self.cycle_time - elapsed_time)
-
         if np.all(self.obs == 0):
             self.execute_nobody_deflation_action()
             time.sleep(self.cycle_time)
         else:
+            if elapsed_time <= self.cycle_time:
+                time.sleep(self.cycle_time - elapsed_time)
+
             self.execute_inflation_action(action)
             time.sleep(self.inflation_time)  # 等待充气完成
             self.execute_deflation_action(action)
@@ -396,7 +396,7 @@ class SmartBedEnv(gym.Env):
 
         self.pressure_temp_2nd = None
 
-        return self._get_obs, reward, done, False, {'presDataList': self.presDataList}
+        return self._get_obs, reward, done, False, {'airbagPresList': self.airbagPresList}
 
     def __del__(self):
         self.stop_threads()
