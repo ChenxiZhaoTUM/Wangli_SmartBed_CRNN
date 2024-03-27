@@ -73,7 +73,7 @@ def process_sleep_values(line):
     return time, []
 
 
-#
+# change input dimension to [12, 32, 64]
 def change_input_dimension(input_data_arr, input_sleep_data_arr):
     new_input_data = torch.zeros(12, 32, 64)
 
@@ -86,6 +86,7 @@ def change_input_dimension(input_data_arr, input_sleep_data_arr):
     return new_input_data
 
 
+# mean and std for normalization
 input_mean = torch.load('model_for_realtime/input_mean.pt')
 input_std = torch.load('model_for_realtime/input_std.pt')
 target_mean = torch.load('model_for_realtime/target_mean.pt')
@@ -142,6 +143,7 @@ def result_of_CRNN(model, avg_pressure, sleep_value):
     return None
 
 
+# load trained NN
 def load_model():
     # load trained CRNN model
     output_dir = "./TEST"
@@ -157,6 +159,7 @@ def load_model():
     return netG
 
 
+# animation display
 def LowPressureData2img(model, pressure_lines, sleep_line):
     sum_arr = np.zeros(16)
     num = 0
@@ -197,6 +200,7 @@ def LowPressureData2img(model, pressure_lines, sleep_line):
             return
 
 
+# save images
 def imageOut(filename, _input, _output, max_val=40, min_val=0):
     output = np.copy(_output)
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))

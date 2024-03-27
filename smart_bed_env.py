@@ -65,6 +65,7 @@ class packetHandleThread(QThread):
                             cmdAckEvent.set()
 
 
+# here is the smart bed environment for reinforcement learning
 class SmartBedEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 30}
 
@@ -95,6 +96,7 @@ class SmartBedEnv(gym.Env):
         self.cmdLock = Lock()
         self.get_uart_ports()
 
+        # pressure mat serial port
         self.pressure_ser = serial.Serial()
         self.pressure_ser.port = pressure_port
         self.pressure_ser.baudrate = pressure_baudrate
@@ -105,6 +107,7 @@ class SmartBedEnv(gym.Env):
         self.matThread = Thread(target=self.mat_task)
         self.matThread.start()
 
+        # airbag serial port
         self.control_ser = serial.Serial()
         self.control_ser.port = control_port
         self.control_ser.baudrate = control_baudrate
@@ -145,6 +148,7 @@ class SmartBedEnv(gym.Env):
         self.uartReceiveThread.join()
         self.packetParaseThread.join()
 
+    # process for pressure from mat
     def mat_task(self):
         while self.running:
             if self.pressure_ser.is_open:
@@ -336,6 +340,7 @@ class SmartBedEnv(gym.Env):
         print('reset train_obs: ', self._get_obs)
         return self._get_obs, {}
 
+    # step for training
     def step(self, action):
         print("Action is: ", action)
 

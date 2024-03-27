@@ -157,9 +157,7 @@ agent = Agent(env)
 max_episodes = 50000
 max_steps = 200
 
-learning_finish_flag = False
-frames = []
-
+# start to train
 for episode in range(max_episodes):
     print("--------------------------")
     print("Episode: ", episode)
