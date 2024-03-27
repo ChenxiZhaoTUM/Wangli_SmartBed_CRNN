@@ -114,8 +114,6 @@ class SmartBedEnv(gym.Env):
 
         self.uartReceiveThread = Thread(target=self.uart_receive_task)
         self.uartReceiveThread.start()
-        # self.packetParaseThread = packetHandleThread()
-        self.airbagPresList = []  # airbag pressure list
         self.packetParaseThread = packetHandleThread()
         self.packetParaseThread.airPressReflash.connect(self.airbag_pressure_display)
         self.packetParaseThread.start()
@@ -217,13 +215,8 @@ class SmartBedEnv(gym.Env):
         self.cmdLock.release()
 
     def airbag_pressure_display(self, data):
-        if data:
-            print(f"接收到气压数据: {data}")
-        else:
-            print("接收到空的气压数据")
         for i in range(6):
-            print(f"index[{i}]: {data[i]:.2f}")
-        self.airbagPresList = data
+            print("index[%d]: %.2f" % (i, data[i]))
 
     def execute_inflation_action(self, action):
         print("Now execute inflation!")
@@ -350,13 +343,13 @@ class SmartBedEnv(gym.Env):
         elapsed_time = current_time - self.last_update_time
         self.last_update_time = current_time
 
+        if elapsed_time <= self.cycle_time:
+            time.sleep(self.cycle_time - elapsed_time)
+
         if np.all(self.obs == 0):
             self.execute_nobody_deflation_action()
             time.sleep(self.cycle_time)
         else:
-            if elapsed_time <= self.cycle_time:
-                time.sleep(self.cycle_time - elapsed_time)
-
             self.execute_inflation_action(action)
             time.sleep(self.inflation_time)  # 等待充气完成
             self.execute_deflation_action(action)
@@ -399,9 +392,7 @@ class SmartBedEnv(gym.Env):
 
         self.pressure_temp_2nd = None
 
-        print("airbagPresList:", self.airbagPresList)
-
-        return self._get_obs, reward, done, False, {'airbagPresList': self.airbagPresList}
+        return self._get_obs, reward, done, False, {}
 
     def __del__(self):
         self.stop_threads()

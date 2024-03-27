@@ -8,8 +8,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch import optim
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 
 ### experience replay
 # 构造批次化训练数据
@@ -114,8 +112,7 @@ class Agent:
         non_final_mask = torch.ByteTensor(
             tuple(map(lambda s: s is not None, batch.next_state)))  # 用于标识批量中哪些样本具有非空的下一个状态next_state (1)
         next_state_values = torch.zeros(self.batch_size)
-        next_state_values[non_final_mask] = self.model(non_final_next_state_batch).max(dim=1)[
-            0].detach()  # 计算非终止状态下的下一状态值，max(dim=1)[0]为状态值的最大估计
+        next_state_values[non_final_mask] = self.model(non_final_next_state_batch).max(dim=1)[0].detach()  # 计算非终止状态下的下一状态值，max(dim=1)[0]为状态值的最大估计
 
         # 维度: (batch_size, )
         expected_state_action_values = reward_batch + self.gamma * next_state_values
@@ -150,43 +147,18 @@ class Agent:
         return action.numpy()
 
 
-global_pressures_data = []
-
-
-def add_pressure_data(mat_pres, airbag_pres):
-    # 这里，我们仅简单地将数据追加到列表中
-    # 在实际应用中，可能需要一个线程安全的队列
-    global_pressures_data.append({'mat_pres': mat_pres, 'airbag_pres': airbag_pres})
-
-
-# def update_plot(frame_number, line1, line2):
-#     if global_pressures_data:
-#         data = global_pressures_data.pop(0)  # 获取最早的数据点并从列表中移除
-#         line1.set_ydata(data['mat_pres'])
-#         line2.set_ydata(data['airbag_pres'])
-#     return line1, line2
-
-def update_plot(frame_number, ax1, ax2, line1, line2):
-    if global_pressures_data:
-        data = global_pressures_data[-1]
-        line1.set_ydata(data['mat_pres'])
-        line2.set_ydata(data['airbag_pres'])
-        ax1.relim()
-        ax1.autoscale_view()
-        ax2.relim()
-        ax2.autoscale_view()
-    return line1, line2
-
-
 # interaction between agent and environment
 env = gym.make('SmartBedEnv-v0')
 n_states = env.observation_space.shape[0]  # 16
 n_actions = env.action_space.shape or env.action_space.n  # 6
+
 agent = Agent(env)
 
-max_episodes = 2
-max_steps = 2
-pressures_data = []
+max_episodes = 50000
+max_steps = 200
+
+learning_finish_flag = False
+frames = []
 
 for episode in range(max_episodes):
     print("--------------------------")
@@ -198,41 +170,18 @@ for episode in range(max_episodes):
         print()
         print("Step: ", step)
         action = agent.choose_action(state, episode)
-        next_state, reward, done, _, info = env.step(action)  # Adjust for MultiDiscrete
-
-        if next_state is not None:
-            next_state = torch.tensor(next_state, dtype=torch.float).unsqueeze(0)
-        else:
-            next_state = None
-
+        next_state, reward, done, _, _ = env.step(action)  # Adjust for MultiDiscrete
         reward = torch.tensor([reward], dtype=torch.float)
 
-        airbagPresList = info.get('airbagPresList', [])
-
-        if next_state is not None:
-            mat_pres = next_state.numpy().squeeze()
+        if done:
+            next_state = None
         else:
-            mat_pres = np.zeros(16)
-        airbag_pres = np.array(airbagPresList)
-        add_pressure_data(mat_pres, airbag_pres)
+            next_state = torch.from_numpy(next_state).float().unsqueeze(0)
+
+        agent.memory.push(state, action, next_state, reward)
+        agent.update_q_function()
+        state = next_state
 
         if done:
+            print(f'Episode: {episode}, Steps: {step}')
             break
-
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
-
-# 初始化mat_pres和airbag_pres的线
-line1, = ax1.plot(np.zeros(16), 'r-')  # Mat pressures
-line2, = ax2.plot(np.zeros(72), 'g-')  # Airbag pressures
-
-ax1.set_title('Mat Pressures')
-ax1.set_xlabel('Index')
-ax1.set_ylabel('Value')
-ax2.set_title('Airbag Pressures')
-ax2.set_xlabel('Index')
-ax2.set_ylabel('Value')
-
-# 创建动画
-ani = FuncAnimation(fig, update_plot, fargs=(ax1, ax2, line1, line2), interval=100)
-
-plt.show()
